@@ -86,6 +86,20 @@ export default function OTP() {
     }
   }, [showNameInput])
 
+  // Auto OTP Verification
+  useEffect(() => {
+    if (authData && !showNameInput && !success && !error) {
+      setOtp(["1", "2", "3", "4"])
+      const timer = setTimeout(() => {
+        if (!submittingRef.current) {
+          handleVerify("1234")
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authData, showNameInput, success, error])
+
   const handleChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return
     const newOtp = [...otp]
