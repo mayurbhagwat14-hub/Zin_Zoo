@@ -15,6 +15,21 @@ const topBannerSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true,
+    },
+    categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FoodCategory',
+        default: null
+    },
+    categoryName: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    categorySlug: {
+        type: String,
+        trim: true,
+        default: ''
     }
 }, {
     timestamps: true

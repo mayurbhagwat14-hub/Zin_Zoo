@@ -3,7 +3,8 @@ import {
     createHeroBannersFromFiles,
     deleteHeroBanner,
     updateHeroBannerOrder,
-    toggleHeroBannerStatus
+    toggleHeroBannerStatus,
+    updateHeroBannerCategory
 } from '../services/heroBanner.service.js';
 import { sendResponse } from '../../../../utils/response.js';
 import { ValidationError } from '../../../../core/auth/errors.js';
@@ -25,15 +26,64 @@ export const uploadHeroBannersController = async (req, res, next) => {
             throw new ValidationError('No files uploaded');
         }
 
+        let categoryName = req.body.categoryName || '';
+        let categorySlug = req.body.categorySlug || '';
+        let categoryId = req.body.categoryId || null;
+
+        if (categoryId && (!categoryName || !categorySlug)) {
+            try {
+                const { FoodCategory } = await import('../../admin/models/category.model.js');
+                const cat = await FoodCategory.findById(categoryId).lean();
+                if (cat) {
+                    categoryName = categoryName || cat.name || '';
+                    categorySlug = categorySlug || (cat.name ? String(cat.name).toLowerCase().trim().replace(/\s+/g, '-') : '');
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+
         const meta = {
             title: req.body.title,
             ctaText: req.body.ctaText,
-            ctaLink: req.body.ctaLink
+            ctaLink: req.body.ctaLink,
+            categoryId: categoryId || null,
+            categoryName: categoryName || '',
+            categorySlug: categorySlug || ''
         };
 
         const results = await createHeroBannersFromFiles(req.files, meta);
         broadcastPublicUpdate('banner:update', { action: 'create', section: 'hero', data: results });
         return sendResponse(res, 201, 'Hero banners uploaded', { results });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const updateHeroBannerCategoryController = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        let { categoryId, categoryName, categorySlug } = req.body;
+        if (!id) {
+            throw new ValidationError('Banner id is required');
+        }
+
+        if (categoryId && (!categoryName || !categorySlug)) {
+            try {
+                const { FoodCategory } = await import('../../admin/models/category.model.js');
+                const cat = await FoodCategory.findById(categoryId).lean();
+                if (cat) {
+                    categoryName = categoryName || cat.name || '';
+                    categorySlug = categorySlug || (cat.name ? String(cat.name).toLowerCase().trim().replace(/\s+/g, '-') : '');
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        const updated = await updateHeroBannerCategory(id, { categoryId, categoryName, categorySlug });
+        broadcastPublicUpdate('banner:update', { action: 'update', section: 'hero', data: updated });
+        return sendResponse(res, 200, 'Hero banner category updated', updated);
     } catch (error) {
         next(error);
     }

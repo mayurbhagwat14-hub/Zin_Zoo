@@ -2518,9 +2518,19 @@ export default function Home() {
 
           <button
             type="button"
-            className="absolute inset-0 z-20 h-full w-full border-0 p-0 bg-transparent text-left"
+            className="absolute inset-0 z-20 h-full w-full border-0 p-0 bg-transparent text-left cursor-pointer"
             onClick={() => {
               const bannerData = heroBannersData[currentBannerIndex];
+              if (!bannerData) return;
+
+              // 1. If banner is linked to a food category, redirect to the category page
+              const catSlug = bannerData.categorySlug || (bannerData.categoryName ? slugifyCategory(bannerData.categoryName) : "");
+              if (catSlug) {
+                navigate(`/food/user/category/${catSlug}`);
+                return;
+              }
+
+              // 2. Fallback to linked restaurant if any
               const linkedRestaurants = bannerData?.linkedRestaurants || [];
               if (linkedRestaurants.length > 0) {
                 const firstRestaurant = linkedRestaurants[0];

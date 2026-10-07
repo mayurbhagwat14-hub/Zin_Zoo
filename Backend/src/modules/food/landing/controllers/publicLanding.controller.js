@@ -12,17 +12,35 @@ import TopBanner from '../models/topBanner.model.js';
 import { sendResponse } from '../../../../utils/response.js';
 import mongoose from 'mongoose';
 
-/** Public hero banners for user home: active only, sorted, with linkedRestaurants populated for click-through */
+/** Public hero banners for user home: active only, sorted, with category populated for click-through */
 export const getPublicHeroBannersController = async (req, res, next) => {
     try {
-        const docs = await FoodHeroBanner.find({ isActive: true })
+        let docs = await FoodHeroBanner.find({ isActive: true })
             .sort({ sortOrder: 1, createdAt: -1 })
             .lean();
+
+        // If no hero banners found, fallback to TopBanner
+        if (!docs || docs.length === 0) {
+            const topDocs = await TopBanner.find({ isActive: true }).sort('order').lean();
+            if (topDocs && topDocs.length > 0) {
+                docs = topDocs.map(t => ({
+                    ...t,
+                    imageUrl: t.image || t.imageUrl,
+                    sortOrder: t.order || 0
+                }));
+            }
+        }
+
         const banners = (docs || []).map((b) => {
+            const catName = b.categoryName || '';
+            const catSlug = b.categorySlug || (catName ? String(catName).toLowerCase().trim().replace(/\s+/g, '-') : '');
             return {
                 ...b,
-                linkedRestaurants: [],
-                imageUrl: b.imageUrl
+                linkedRestaurants: b.linkedRestaurants || [],
+                imageUrl: b.imageUrl || b.image,
+                categoryId: b.categoryId || null,
+                categoryName: catName,
+                categorySlug: catSlug
             };
         });
         return sendResponse(res, 200, 'Hero banners fetched', { banners });
@@ -34,7 +52,18 @@ export const getPublicHeroBannersController = async (req, res, next) => {
 export const getPublicTopBannersController = async (req, res, next) => {
     try {
         const docs = await TopBanner.find({ isActive: true }).sort('order').lean();
-        return sendResponse(res, 200, 'Top banners fetched', { banners: docs });
+        const banners = (docs || []).map((b) => {
+            const catName = b.categoryName || '';
+            const catSlug = b.categorySlug || (catName ? String(catName).toLowerCase().trim().replace(/\s+/g, '-') : '');
+            return {
+                ...b,
+                imageUrl: b.image || b.imageUrl,
+                categoryId: b.categoryId || null,
+                categoryName: catName,
+                categorySlug: catSlug
+            };
+        });
+        return sendResponse(res, 200, 'Top banners fetched', { banners });
     } catch (error) {
         next(error);
     }

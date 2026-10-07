@@ -23,6 +23,21 @@ const foodHeroBannerSchema = new mongoose.Schema(
             type: [mongoose.Schema.Types.ObjectId],
             default: []
         },
+        categoryId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'FoodCategory',
+            default: null
+        },
+        categoryName: {
+            type: String,
+            trim: true,
+            default: ''
+        },
+        categorySlug: {
+            type: String,
+            trim: true,
+            default: ''
+        },
         sortOrder: {
             type: Number,
             default: 0,

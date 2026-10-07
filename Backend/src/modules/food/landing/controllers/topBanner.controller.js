@@ -16,6 +16,23 @@ export const uploadTopBannersController = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No images provided' });
         }
 
+        let categoryName = req.body.categoryName || '';
+        let categorySlug = req.body.categorySlug || '';
+        let categoryId = req.body.categoryId || null;
+
+        if (categoryId && (!categoryName || !categorySlug)) {
+            try {
+                const { FoodCategory } = await import('../../admin/models/category.model.js');
+                const cat = await FoodCategory.findById(categoryId).lean();
+                if (cat) {
+                    categoryName = categoryName || cat.name || '';
+                    categorySlug = categorySlug || (cat.name ? String(cat.name).toLowerCase().trim().replace(/\s+/g, '-') : '');
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+
         const uploadedBanners = [];
         const errors = [];
 
@@ -31,7 +48,10 @@ export const uploadTopBannersController = async (req, res) => {
                     image: uploadResult.secure_url,
                     publicId: uploadResult.public_id,
                     order: nextOrder,
-                    isActive: true
+                    isActive: true,
+                    categoryId: categoryId || null,
+                    categoryName: categoryName || '',
+                    categorySlug: categorySlug || ''
                 });
 
                 await newBanner.save();
@@ -48,6 +68,42 @@ export const uploadTopBannersController = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
+};
+
+export const updateTopBannerCategoryController = async (req, res) => {
+    try {
+        let { categoryId, categoryName, categorySlug } = req.body;
+        if (categoryId && (!categoryName || !categorySlug)) {
+            try {
+                const { FoodCategory } = await import('../../admin/models/category.model.js');
+                const cat = await FoodCategory.findById(categoryId).lean();
+                if (cat) {
+                    categoryName = categoryName || cat.name || '';
+                    categorySlug = categorySlug || (cat.name ? String(cat.name).toLowerCase().trim().replace(/\s+/g, '-') : '');
+                }
+            } catch (err) {
+                // ignore
+            }
+        }
+
+        const banner = await TopBanner.findByIdAndUpdate(
+            req.params.id,
+            {
+                categoryId: categoryId || null,
+                categoryName: categoryName || '',
+                categorySlug: categorySlug || ''
+            },
+            { new: true }
+        );
+
+        if (!banner) {
+            return res.status(404).json({ success: false, message: 'Banner not found' });
+        }
+
+        res.status(200).json({ success: true, message: 'Category updated', data: { banner } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to update category', error: error.message });
     }
 };
 

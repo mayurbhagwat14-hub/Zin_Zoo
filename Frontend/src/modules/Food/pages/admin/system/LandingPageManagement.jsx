@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react"
-import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Tag, UtensilsCrossed, ChefHat, Megaphone, Search } from "lucide-react"
+import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Tag, UtensilsCrossed, ChefHat, Megaphone, Search, ChevronDown, Check, X } from "lucide-react"
 import api from "@food/api"
 import { adminAPI } from "@food/api"
 import { getModuleToken } from "@food/utils/auth"
@@ -14,6 +14,219 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+/** Searchable combobox dropdown for selecting food category */
+function SearchableCategorySelect({
+  categories = [],
+  value = "",
+  onChange,
+  placeholder = "-- Select Food Category --",
+  className = "",
+  disabled = false,
+  allowClear = true,
+  size = "md"
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [openUpward, setOpenUpward] = useState(false);
+  const containerRef = useRef(null);
+
+  // Close when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [isOpen]);
+
+  // Check if dropdown should flip upwards when opened, update on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+    const updatePosition = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        // If less than 270px below and enough space above, flip upwards
+        if (spaceBelow < 270 && rect.top > 220) {
+          setOpenUpward(true);
+        } else {
+          setOpenUpward(false);
+        }
+      }
+    };
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen]);
+
+  const selectedCategory = useMemo(() => {
+    return categories.find((c) => c.id === value || c.name === value);
+  }, [categories, value]);
+
+  const filtered = useMemo(() => {
+    if (!query.trim()) return categories;
+    const q = query.toLowerCase().trim();
+    return categories.filter((c) =>
+      c.name.toLowerCase().includes(q) || (c.slug && c.slug.toLowerCase().includes(q))
+    );
+  }, [categories, query]);
+
+  const handleSelect = (catId) => {
+    onChange?.(catId);
+    setIsOpen(false);
+    setQuery("");
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    onChange?.("");
+    setQuery("");
+  };
+
+  const isSmall = size === "sm";
+
+  return (
+    <div ref={containerRef} className={`relative ${className} ${isOpen ? "z-50" : ""}`}>
+      {/* Trigger Button */}
+      <div
+        onClick={() => {
+          if (!disabled) setIsOpen((prev) => !prev);
+        }}
+        className={`flex items-center justify-between border rounded-lg bg-white cursor-pointer transition-all ${
+          isSmall ? "h-8 px-2.5 text-xs" : "h-10 px-3 text-sm"
+        } ${
+          isOpen
+            ? "border-blue-500 ring-2 ring-blue-500/20 shadow-sm"
+            : "border-slate-300 hover:border-slate-400"
+        } ${disabled ? "opacity-50 cursor-not-allowed bg-slate-50" : ""}`}
+      >
+        <div className="flex items-center gap-1.5 truncate flex-1 mr-1">
+          {selectedCategory ? (
+            <span className="font-semibold text-slate-800 truncate">
+              {selectedCategory.name}
+            </span>
+          ) : (
+            <span className="text-slate-400 truncate">{placeholder}</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {allowClear && selectedCategory && !disabled && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-0.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+              isOpen ? "rotate-180 text-blue-600" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* Floating Dropdown List */}
+      {isOpen && (
+        <div
+          className={`absolute z-[100] right-0 ${
+            openUpward ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          } bg-white border border-slate-200 rounded-lg shadow-2xl min-w-[230px] w-full`}
+        >
+          {/* Search Box */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/80 rounded-t-lg">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search category..."
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-200 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-800 placeholder:text-slate-400"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setQuery("");
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div
+            className="overflow-y-auto p-1 divide-y divide-slate-50"
+            style={{
+              maxHeight: "220px",
+              overflowY: "auto",
+              scrollbarWidth: "thin",
+              scrollbarColor: "#cbd5e1 transparent",
+            }}
+            onWheel={(e) => e.stopPropagation()}
+          >
+            {allowClear && (
+              <button
+                type="button"
+                onClick={() => handleSelect("")}
+                className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between hover:bg-slate-100 text-slate-500 ${
+                  !value ? "bg-blue-50/50 text-blue-600 font-medium" : ""
+                }`}
+              >
+                <span>-- No Category (None) --</span>
+                {!value && <Check className="w-3.5 h-3.5 text-blue-600" />}
+              </button>
+            )}
+
+            {filtered.length > 0 ? (
+              filtered.map((cat) => {
+                const isSelected = cat.id === value || cat.name === value;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => handleSelect(cat.id)}
+                    className={`w-full text-left px-2.5 py-1.5 rounded text-xs flex items-center justify-between transition-colors ${
+                      isSelected
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "hover:bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    <span className="truncate">{cat.name}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="py-3 px-2 text-center text-xs text-slate-400">
+                No category found for "{query}"
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function LandingPageManagement() {
   const [activeTab, setActiveTab] = useState('top-banners')
@@ -27,6 +240,11 @@ export default function LandingPageManagement() {
   const [topBannersUploadProgress, setTopBannersUploadProgress] = useState({ current: 0, total: 0 })
   const [topBannersDeleting, setTopBannersDeleting] = useState(null)
   const topBannersFileInputRef = useRef(null)
+
+  // Food Catalog Categories for Banner Redirection
+  const [foodCategories, setFoodCategories] = useState([])
+  const [selectedCategoryForUpload, setSelectedCategoryForUpload] = useState("")
+  const [updatingBannerCategory, setUpdatingBannerCategory] = useState(null)
 
   // Hero Banners
   const [banners, setBanners] = useState([])
@@ -156,28 +374,63 @@ export default function LandingPageManagement() {
 
   // Fetch data on mount (authentication is handled by ProtectedRoute)
   useEffect(() => {
-
     fetchTopBanners()
     fetchBanners()
     fetchUnder250Banners()
     fetchAccessoriesBanners()
     fetchSettings()
+    fetchFoodCategories()
   }, [])
 
-  // Fetch Top 10 and Gourmet when Explore More tab is active; refetch restaurants so dropdown is populated
-  useEffect(() => {
-    if (activeTab === 'explore-more') {
-      if (allRestaurants.length === 0) {
-        fetchAllRestaurants()
+  // Fetch food categories from catalog for linking banners to categories
+  const fetchFoodCategories = async () => {
+    try {
+      const res = await adminAPI.getCategories({ limit: 1000 })
+      const list = res?.data?.data?.categories || res?.data?.data || []
+      if (Array.isArray(list)) {
+        setFoodCategories(
+          list
+            .filter((c) => c && c.name)
+            .map((c) => ({
+              id: String(c._id || c.id),
+              name: String(c.name).trim(),
+              slug: c.slug || String(c.name).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        )
       }
-      if (exploreMoreSubTab === 'gourmet') {
-        fetchGourmetRestaurants()
-      } else if (exploreMoreSubTab === 'icons') {
-        fetchExploreMore()
-      }
+    } catch (err) {
+      debugError("Error fetching food categories:", err)
     }
-  }, [activeTab, exploreMoreSubTab])
+  }
 
+  // Update category of an existing banner
+  const handleBannerCategoryChange = async (bannerId, newCategoryId, type = 'hero') => {
+    try {
+      setUpdatingBannerCategory(bannerId)
+      const found = foodCategories.find(c => c.id === newCategoryId)
+      const payload = {
+        categoryId: newCategoryId || null,
+        categoryName: found ? found.name : '',
+        categorySlug: found ? found.slug : ''
+      }
+      const endpoint = type === 'hero' ? `/food/hero-banners/${bannerId}/category` : `/food/top-banners/${bannerId}/category`
+      const res = await api.patch(endpoint, payload, getAuthConfig())
+      if (res.data.success) {
+        setSuccess('Banner category updated successfully!')
+        setTimeout(() => setSuccess(null), 4000)
+        if (type === 'hero') {
+          await fetchBanners()
+        } else {
+          await fetchTopBanners()
+        }
+      }
+    } catch (err) {
+      setErrorSafely(err.response?.data?.message || 'Failed to update banner category')
+    } finally {
+      setUpdatingBannerCategory(null)
+    }
+  }
 
   // ==================== TOP BANNERS ====================
   const fetchTopBanners = async () => {
@@ -231,6 +484,15 @@ export default function LandingPageManagement() {
         formData.append('files', file)
       })
 
+      if (selectedCategoryForUpload) {
+        const found = foodCategories.find(c => c.id === selectedCategoryForUpload || c.name === selectedCategoryForUpload)
+        if (found) {
+          formData.append('categoryId', found.id)
+          formData.append('categoryName', found.name)
+          formData.append('categorySlug', found.slug)
+        }
+      }
+
       const config = getAuthConfig()
       const response = await api.post('/food/top-banners/multiple', formData, config)
 
@@ -240,6 +502,7 @@ export default function LandingPageManagement() {
         const successCount = uploadedBanners.length
         const failCount = errors.length
 
+        setSelectedCategoryForUpload('')
         await fetchTopBanners()
         if (topBannersFileInputRef.current) topBannersFileInputRef.current.value = ''
 
@@ -383,6 +646,15 @@ export default function LandingPageManagement() {
         formData.append('files', file)
       })
 
+      if (selectedCategoryForUpload) {
+        const found = foodCategories.find(c => c.id === selectedCategoryForUpload || c.name === selectedCategoryForUpload)
+        if (found) {
+          formData.append('categoryId', found.id)
+          formData.append('categoryName', found.name)
+          formData.append('categorySlug', found.slug)
+        }
+      }
+
       // Use getAuthConfig to ensure proper Authorization header
       // Don't set Content-Type - axios will set it automatically with boundary for FormData
       const config = getAuthConfig()
@@ -404,6 +676,7 @@ export default function LandingPageManagement() {
         const successCount = uploadedBanners.length
         const failCount = errors.length
 
+        setSelectedCategoryForUpload('')
         await fetchBanners()
         if (bannersFileInputRef.current) bannersFileInputRef.current.value = ''
 
@@ -1473,6 +1746,29 @@ export default function LandingPageManagement() {
             {/* Upload Section */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h2 className="text-lg font-bold text-slate-900 mb-4">Upload New Top Banner(s) (800x680 pixels)</h2>
+
+              {/* Category Selector for New Banners */}
+              <div className="mb-5 p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <label className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-blue-600" />
+                    Target Food Category <span className="text-xs font-normal text-slate-500">(Optional)</span>
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    When user taps this banner on the home screen, they will redirect to this category.
+                  </p>
+                </div>
+                <div className="flex-shrink-0 w-full md:w-80">
+                  <SearchableCategorySelect
+                    categories={foodCategories}
+                    value={selectedCategoryForUpload}
+                    onChange={setSelectedCategoryForUpload}
+                    placeholder="Search & select category..."
+                    size="md"
+                  />
+                </div>
+              </div>
+
               <div
                 className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50/30 cursor-pointer transition-colors hover:border-blue-400 hover:bg-blue-50/50"
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -1545,8 +1841,8 @@ export default function LandingPageManagement() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {topBanners.map((banner, index) => (
-                    <div key={banner._id} className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                      <div className="relative aspect-video bg-slate-100">
+                    <div key={banner._id} className="border border-slate-200 rounded-lg bg-white hover:shadow-md transition-shadow">
+                      <div className="relative aspect-video bg-slate-100 rounded-t-lg overflow-hidden">
                         <img src={banner.image || banner.imageUrl} alt={`Top Banner ${index + 1}`} className="w-full h-full object-cover" />
                         <div className="absolute top-2 right-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${banner.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -1557,7 +1853,7 @@ export default function LandingPageManagement() {
                           <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">Order: {banner.order}</span>
                         </div>
                       </div>
-                      <div className="p-4 bg-white">
+                      <div className="p-4 bg-white rounded-b-lg">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1">
                             <button onClick={() => handleTopBannerOrderChange(banner._id, 'up')} disabled={index === 0} className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-50">
@@ -1604,6 +1900,30 @@ export default function LandingPageManagement() {
                             </div>
                           </div>
                         )}
+
+                        {/* Linked Food Category */}
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Tag className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                            <span className="text-slate-500 font-medium">Category:</span>
+                            {banner.categoryName ? (
+                              <span className="font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                {banner.categoryName}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">None</span>
+                            )}
+                          </div>
+                          <SearchableCategorySelect
+                            categories={foodCategories}
+                            value={banner.categoryId || ""}
+                            disabled={updatingBannerCategory === banner._id}
+                            onChange={(catId) => handleBannerCategoryChange(banner._id, catId, 'top')}
+                            placeholder="Assign / Change..."
+                            size="sm"
+                            className="w-48"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1834,6 +2154,29 @@ export default function LandingPageManagement() {
             {/* Upload Section */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h2 className="text-lg font-bold text-slate-900 mb-4">Upload New Banner(s)</h2>
+
+              {/* Category Selector for New Hero Banners */}
+              <div className="mb-5 p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <label className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Tag className="w-4 h-4 text-blue-600" />
+                    Target Food Category <span className="text-xs font-normal text-slate-500">(Optional)</span>
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    When user taps this banner on the home screen, they will redirect to this category.
+                  </p>
+                </div>
+                <div className="flex-shrink-0 w-full md:w-80">
+                  <SearchableCategorySelect
+                    categories={foodCategories}
+                    value={selectedCategoryForUpload}
+                    onChange={setSelectedCategoryForUpload}
+                    placeholder="Search & select category..."
+                    size="md"
+                  />
+                </div>
+              </div>
+
               <div
                 className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50/30 cursor-pointer transition-colors hover:border-blue-400 hover:bg-blue-50/50"
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -1906,8 +2249,8 @@ export default function LandingPageManagement() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {banners.map((banner, index) => (
-                    <div key={banner._id} className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                      <div className="relative aspect-video bg-slate-100">
+                    <div key={banner._id} className="border border-slate-200 rounded-lg bg-white hover:shadow-md transition-shadow">
+                      <div className="relative aspect-video bg-slate-100 rounded-t-lg overflow-hidden">
                         <img src={banner.imageUrl} alt={`Hero Banner ${index + 1}`} className="w-full h-full object-cover" />
                         <div className="absolute top-2 right-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${banner.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -1918,7 +2261,7 @@ export default function LandingPageManagement() {
                           <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">Order: {banner.order}</span>
                         </div>
                       </div>
-                      <div className="p-4 bg-white">
+                      <div className="p-4 bg-white rounded-b-lg">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1">
                             <button onClick={() => handleBannerOrderChange(banner._id, 'up')} disabled={index === 0} className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-50">
@@ -1965,6 +2308,30 @@ export default function LandingPageManagement() {
                             </div>
                           </div>
                         )}
+
+                        {/* Linked Food Category */}
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Tag className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                            <span className="text-slate-500 font-medium">Category:</span>
+                            {banner.categoryName ? (
+                              <span className="font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                {banner.categoryName}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic">None</span>
+                            )}
+                          </div>
+                          <SearchableCategorySelect
+                            categories={foodCategories}
+                            value={banner.categoryId || ""}
+                            disabled={updatingBannerCategory === banner._id}
+                            onChange={(catId) => handleBannerCategoryChange(banner._id, catId, 'hero')}
+                            placeholder="Assign / Change..."
+                            size="sm"
+                            className="w-48"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}

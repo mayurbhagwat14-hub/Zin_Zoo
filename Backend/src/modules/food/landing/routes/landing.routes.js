@@ -5,14 +5,16 @@ import {
     uploadHeroBannersController,
     deleteHeroBannerController,
     updateHeroBannerOrderController,
-    toggleHeroBannerStatusController
+    toggleHeroBannerStatusController,
+    updateHeroBannerCategoryController
 } from '../controllers/heroBanner.controller.js';
 import {
     listTopBannersController,
     uploadTopBannersController,
     deleteTopBannerController,
     updateTopBannerOrderController,
-    toggleTopBannerStatusController
+    toggleTopBannerStatusController,
+    updateTopBannerCategoryController
 } from '../controllers/topBanner.controller.js';
 import {
     listUnder250BannersController,
@@ -83,6 +85,7 @@ router.post(
 router.delete('/hero-banners/:id', deleteHeroBannerController);
 router.patch('/hero-banners/:id/order', updateHeroBannerOrderController);
 router.patch('/hero-banners/:id/status', toggleHeroBannerStatusController);
+router.patch('/hero-banners/:id/category', updateHeroBannerCategoryController);
 
 // Admin top banners
 router.get('/top-banners', listTopBannersController);
@@ -94,6 +97,7 @@ router.post(
 router.delete('/top-banners/:id', deleteTopBannerController);
 router.patch('/top-banners/:id/order', updateTopBannerOrderController);
 router.patch('/top-banners/:id/status', toggleTopBannerStatusController);
+router.patch('/top-banners/:id/category', updateTopBannerCategoryController);
 
 // Admin under 250 banners
 router.get('/hero-banners/under-250', listUnder250BannersController);
