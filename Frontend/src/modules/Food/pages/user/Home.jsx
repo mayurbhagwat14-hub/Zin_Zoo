@@ -397,8 +397,243 @@ const RestaurantImageCarousel = React.memo(
   },
 );
 
+// Self-contained Hero Banner Carousel to prevent re-rendering the entire Home page on each slide transition
+const HomeHeroBanner = React.memo(({
+  heroBannerImages = [],
+  heroBannersData = [],
+  showBannerSkeleton = false,
+  slugifyCategory,
+  navigate,
+  heroShellRef,
+}) => {
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchEndX = useRef(0);
+  const touchEndY = useRef(0);
+  const isSwiping = useRef(false);
+  const autoSlideIntervalRef = useRef(null);
+  const HERO_BANNER_AUTO_SLIDE_MS = 5000;
+
+  useEffect(() => {
+    setCurrentBannerIndex((prev) => {
+      if (heroBannerImages.length === 0) return 0;
+      return Math.min(prev, heroBannerImages.length - 1);
+    });
+  }, [heroBannerImages.length]);
+
+  useEffect(() => {
+    heroBannerImages.forEach((src) => {
+      if (!src) return;
+      const img = new window.Image();
+      img.src = src;
+    });
+  }, [heroBannerImages]);
+
+  const startAutoSlide = useCallback(() => {
+    if (autoSlideIntervalRef.current) {
+      clearInterval(autoSlideIntervalRef.current);
+    }
+    if (heroBannerImages.length <= 1) return;
+
+    autoSlideIntervalRef.current = setInterval(() => {
+      if (!isSwiping.current) {
+        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length);
+      }
+    }, HERO_BANNER_AUTO_SLIDE_MS);
+  }, [heroBannerImages.length]);
+
+  useEffect(() => {
+    startAutoSlide();
+    return () => {
+      if (autoSlideIntervalRef.current) {
+        clearInterval(autoSlideIntervalRef.current);
+      }
+    };
+  }, [startAutoSlide]);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwiping.current = true;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+    touchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = () => {
+    if (!isSwiping.current || heroBannerImages.length === 0) return;
+    const deltaX = touchEndX.current - touchStartX.current;
+    const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+    const minSwipeDistance = 50;
+
+    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
+      if (deltaX > 0) {
+        setCurrentBannerIndex(
+          (prev) => (prev - 1 + heroBannerImages.length) % heroBannerImages.length
+        );
+      } else {
+        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length);
+      }
+      startAutoSlide();
+    }
+
+    setTimeout(() => {
+      isSwiping.current = false;
+    }, 300);
+    touchStartX.current = 0;
+    touchStartY.current = 0;
+    touchEndX.current = 0;
+    touchEndY.current = 0;
+  };
+
+  const handleMouseDown = (e) => {
+    touchStartX.current = e.clientX;
+    touchStartY.current = e.clientY;
+    isSwiping.current = true;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isSwiping.current) return;
+    touchEndX.current = e.clientX;
+    touchEndY.current = e.clientY;
+  };
+
+  const handleMouseUp = () => {
+    if (!isSwiping.current || heroBannerImages.length === 0) return;
+    const deltaX = touchEndX.current - touchStartX.current;
+    const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+    const minSwipeDistance = 50;
+
+    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
+      if (deltaX > 0) {
+        setCurrentBannerIndex(
+          (prev) => (prev - 1 + heroBannerImages.length) % heroBannerImages.length
+        );
+      } else {
+        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length);
+      }
+      startAutoSlide();
+    }
+
+    setTimeout(() => {
+      isSwiping.current = false;
+    }, 300);
+    touchStartX.current = 0;
+    touchStartY.current = 0;
+    touchEndX.current = 0;
+    touchEndY.current = 0;
+  };
+
+  if (showBannerSkeleton) {
+    return (
+      <div className="px-4 md:px-0 py-2">
+        <HeroBannerSkeleton className="h-36 sm:h-44 lg:h-56 rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (heroBannerImages.length === 0) return null;
+
+  return (
+    <div className="px-4 md:px-0 py-2">
+      <div
+        ref={heroShellRef}
+        data-home-hero-shell="true"
+        className="relative w-full overflow-hidden aspect-[16/9] md:aspect-[21/9] lg:aspect-[2.5/1] rounded-2xl shadow-sm group cursor-pointer bg-white"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+            <motion.div
+              animate={{
+                x: ['-200%', '200%'],
+              }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                repeatDelay: 5,
+                ease: "easeInOut"
+              }}
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] w-[150%] h-full"
+            />
+          </div>
+          {heroBannerImages.map((image, index) => (
+            <div
+              key={`${index}-${image}`}
+              className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+              style={{
+                opacity: currentBannerIndex === index ? 1 : 0,
+                zIndex: currentBannerIndex === index ? 2 : 1,
+                pointerEvents: "none",
+              }}>
+              <img
+                src={image}
+                alt={`Hero Banner ${index + 1}`}
+                className="h-full w-full object-cover"
+                loading={index === currentBannerIndex ? "eager" : "lazy"}
+                fetchPriority={index === currentBannerIndex ? "high" : "low"}
+                draggable={false}
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="absolute inset-0 z-20 h-full w-full border-0 p-0 bg-transparent text-left cursor-pointer"
+          onClick={() => {
+            const bannerData = heroBannersData[currentBannerIndex];
+            if (!bannerData) return;
+
+            const catSlug = bannerData.categorySlug || (bannerData.categoryName ? slugifyCategory(bannerData.categoryName) : "");
+            if (catSlug) {
+              navigate(`/food/user/category/${catSlug}`);
+              return;
+            }
+
+            const linkedRestaurants = bannerData?.linkedRestaurants || [];
+            if (linkedRestaurants.length > 0) {
+              const firstRestaurant = linkedRestaurants[0];
+              const restaurantSlug = firstRestaurant.slug || firstRestaurant.restaurantId || firstRestaurant._id;
+              navigate(`/restaurants/${restaurantSlug}`);
+            }
+          }}
+          aria-label={`Open hero banner ${currentBannerIndex + 1}`}
+        />
+
+        {heroBannerImages.length > 1 && (
+          <>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setCurrentBannerIndex((prev) => (prev - 1 + heroBannerImages.length) % heroBannerImages.length); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm transition-all hover:scale-105"
+              aria-label="Previous banner"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm transition-all hover:scale-105"
+              aria-label="Next banner"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function Home() {
-  const HERO_BANNER_AUTO_SLIDE_MS = 3500;
   const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api(\/v\d+)?\/?$/, "");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -496,7 +731,6 @@ export default function Home() {
 
 
 
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [heroBannerImages, setHeroBannerImages] = useState([]);
   const [heroBannersData, setHeroBannersData] = useState([]); // Store full banner data with linked restaurants
   const [loadingBanners, setLoadingBanners] = useState(true);
@@ -820,14 +1054,6 @@ export default function Home() {
     return normalizedLandingCategories;
   }, [menuCategories, realCategories, normalizedLandingCategories]);
 
-  // Swipe functionality for hero banner carousel
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const touchEndX = useRef(0);
-  const touchEndY = useRef(0);
-  const isSwiping = useRef(false);
-  const autoSlideIntervalRef = useRef(null);
-
   // Sync prevVegMode when vegMode changes from context
   useEffect(() => {
     if (vegMode !== prevVegMode && !isHandlingSwitchOff.current) {
@@ -994,142 +1220,6 @@ export default function Home() {
     };
   }, []);
 
-  // Keep index within current banner bounds after admin updates/reloads.
-  useEffect(() => {
-    setCurrentBannerIndex((prev) => {
-      if (heroBannerImages.length === 0) return 0;
-      return Math.min(prev, heroBannerImages.length - 1);
-    });
-  }, [heroBannerImages.length]);
-
-  // Preload hero images to avoid white blink during slide transition.
-  useEffect(() => {
-    heroBannerImages.forEach((src) => {
-      if (!src) return;
-      const img = new window.Image();
-      img.src = src;
-    });
-  }, [heroBannerImages]);
-
-  const startHeroBannerAutoSlide = useCallback(() => {
-    if (autoSlideIntervalRef.current) {
-      clearInterval(autoSlideIntervalRef.current);
-    }
-
-    if (heroBannerImages.length <= 1) return;
-
-    autoSlideIntervalRef.current = setInterval(() => {
-      if (!isSwiping.current) {
-        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length);
-      }
-    }, HERO_BANNER_AUTO_SLIDE_MS);
-  }, [heroBannerImages.length, HERO_BANNER_AUTO_SLIDE_MS]);
-
-  // Auto-cycle hero banner images
-  useEffect(() => {
-    startHeroBannerAutoSlide();
-
-    return () => {
-      if (autoSlideIntervalRef.current) {
-        clearInterval(autoSlideIntervalRef.current);
-      }
-    };
-  }, [startHeroBannerAutoSlide]);
-
-  // Helper function to reset auto-slide timer
-  const resetAutoSlide = useCallback(() => {
-    startHeroBannerAutoSlide();
-  }, [startHeroBannerAutoSlide]);
-
-  // Swipe handlers for hero banner carousel
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    isSwiping.current = true;
-  };
-
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.touches[0].clientX;
-    touchEndY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = () => {
-    if (!isSwiping.current || heroBannerImages.length === 0) return;
-
-    const deltaX = touchEndX.current - touchStartX.current;
-    const deltaY = Math.abs(touchEndY.current - touchStartY.current);
-    const minSwipeDistance = 50; // Minimum distance for a swipe
-
-    // Check if it's a horizontal swipe (not vertical scroll)
-    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
-      if (deltaX > 0) {
-        // Swipe right - go to previous image
-        setCurrentBannerIndex(
-          (prev) =>
-            (prev - 1 + heroBannerImages.length) % heroBannerImages.length,
-        );
-      } else {
-        // Swipe left - go to next image
-        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length);
-      }
-      // Reset auto-slide timer after manual swipe
-      resetAutoSlide();
-    }
-
-    // Reset swipe state after a short delay
-    setTimeout(() => {
-      isSwiping.current = false;
-    }, 300);
-
-    // Reset touch positions
-    touchStartX.current = 0;
-    touchStartY.current = 0;
-    touchEndX.current = 0;
-    touchEndY.current = 0;
-  };
-
-  // Mouse handlers for desktop drag support
-  const handleMouseDown = (e) => {
-    touchStartX.current = e.clientX;
-    touchStartY.current = e.clientY;
-    isSwiping.current = true;
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isSwiping.current) return;
-    touchEndX.current = e.clientX;
-    touchEndY.current = e.clientY;
-  };
-
-  const handleMouseUp = () => {
-    if (!isSwiping.current || heroBannerImages.length === 0) return;
-
-    const deltaX = touchEndX.current - touchStartX.current;
-    const deltaY = Math.abs(touchEndY.current - touchStartY.current);
-    const minSwipeDistance = 50;
-
-    if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
-      if (deltaX > 0) {
-        setCurrentBannerIndex(
-          (prev) =>
-            (prev - 1 + heroBannerImages.length) % heroBannerImages.length,
-        );
-      } else {
-        setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length);
-      }
-      // Reset auto-slide timer after manual swipe
-      resetAutoSlide();
-    }
-
-    setTimeout(() => {
-      isSwiping.current = false;
-    }, 300);
-
-    touchStartX.current = 0;
-    touchStartY.current = 0;
-    touchEndX.current = 0;
-    touchEndY.current = 0;
-  };
   const [activeFilters, setActiveFilters] = useState(cachedState ? cachedState.activeFilters : new Set());
   const [sortBy, setSortBy] = useState(cachedState ? cachedState.sortBy : null); // null, 'price-low', 'price-high', 'rating-high', 'rating-low'
   const [selectedCuisine, setSelectedCuisine] = useState(cachedState ? cachedState.selectedCuisine : null);
@@ -1443,7 +1533,12 @@ export default function Home() {
   // Fetch hero banners from public API (no auth required)
   useEffect(() => {
     let cancelled = false;
-    setLoadingBanners(true);
+    setHeroBannerImages((prevImages) => {
+      if (!prevImages || prevImages.length === 0) {
+        setLoadingBanners(true);
+      }
+      return prevImages;
+    });
     publicGetOnce("/food/hero-banners/public", { params: { zoneId: effectiveZoneId } })
       .then((response) => {
         if (cancelled) return;
@@ -1458,7 +1553,6 @@ export default function Home() {
           .filter(Boolean);
         setHeroBannerImages(images);
         setHeroBannersData(list);
-        setCurrentBannerIndex(0);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -1480,9 +1574,6 @@ export default function Home() {
     isEffectiveLocationOutOfService;
 
   // Mock points value - replace with actual points from context/store
-  const userPoints = 99;
-
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("food");
 
 
@@ -1568,13 +1659,20 @@ export default function Home() {
   }, [isFilterOpen]);
 
   // Fetch restaurants from API with filters
+  const effectiveLocationRef = useRef(effectiveLocation);
+  effectiveLocationRef.current = effectiveLocation;
+  const effectiveZoneIdRef = useRef(effectiveZoneId);
+  effectiveZoneIdRef.current = effectiveZoneId;
+  const restaurantsDataRef = useRef(restaurantsData);
+  restaurantsDataRef.current = restaurantsData;
+
   const fetchRestaurants = useCallback(
-    async (filters = {}, pageNum = 1, append = false) => {
+    async (filters = {}, pageNum = 1, append = false, isBackground = false) => {
       const requestSeq = ++restaurantsRequestSeqRef.current;
       try {
         if (append) {
           setLoadingMoreRestaurants(true);
-        } else {
+        } else if (!isBackground && (!restaurantsDataRef.current || restaurantsDataRef.current.length === 0)) {
           setLoadingRestaurants(true);
         }
 
@@ -1587,12 +1685,13 @@ export default function Home() {
         };
 
         // Always send user coordinates when available so backend can compute distance/sort.
+        const userLoc = effectiveLocationRef.current;
         if (
-          Number.isFinite(effectiveLocation?.latitude) &&
-          Number.isFinite(effectiveLocation?.longitude)
+          Number.isFinite(userLoc?.latitude) &&
+          Number.isFinite(userLoc?.longitude)
         ) {
-          params.lat = effectiveLocation.latitude;
-          params.lng = effectiveLocation.longitude;
+          params.lat = userLoc.latitude;
+          params.lng = userLoc.longitude;
         }
 
         // Sort by
@@ -1647,8 +1746,9 @@ export default function Home() {
           params.trusted = "true";
         }
 
-        if (effectiveZoneId) {
-          params.zoneId = effectiveZoneId;
+        const currentZoneId = effectiveZoneIdRef.current;
+        if (currentZoneId) {
+          params.zoneId = currentZoneId;
         }
 
         debugLog("Fetching restaurants with params:", params);
@@ -1965,9 +2065,6 @@ export default function Home() {
     [
       extractImages,
       buildRestaurantImageCandidates,
-      effectiveLocation?.latitude,
-      effectiveLocation?.longitude,
-      effectiveZoneId,
     ],
   );
 
@@ -2032,11 +2129,24 @@ export default function Home() {
   }), [fetchRestaurants, appliedFilters]);
   usePublicSocket(publicSocketListeners);
 
-  // Fetch restaurants when appliedFilters change
+  const prevZoneIdRef = useRef(effectiveZoneId);
+  const isInitialMountDoneRef = useRef(false);
+
+  // Fetch restaurants on initial mount and when appliedFilters change
   useEffect(() => {
     setRestaurantsPage(1);
-    fetchRestaurants(appliedFilters, 1, false);
+    fetchRestaurants(appliedFilters, 1, false, false);
+    isInitialMountDoneRef.current = true;
   }, [appliedFilters, fetchRestaurants]);
+
+  // When delivery zone changes after initial mount, refetch in background without flashing skeletons
+  useEffect(() => {
+    if (!isInitialMountDoneRef.current) return;
+    if (prevZoneIdRef.current !== effectiveZoneId) {
+      prevZoneIdRef.current = effectiveZoneId;
+      fetchRestaurants(appliedFilters, 1, false, true);
+    }
+  }, [effectiveZoneId, appliedFilters, fetchRestaurants]);
 
   // Recalculate distances when user location updates
   useEffect(() => {
@@ -2444,128 +2554,19 @@ export default function Home() {
   // Removed GSAP animations - using CSS and ScrollReveal components instead for better performance
   // Auto-scroll removed - manual scroll only
 
-  // Animated placeholder cycling - same as RestaurantDetails highlight offer animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-    }, 2000); // Change placeholder every 2 seconds (same as RestaurantDetails)
-
-    return () => clearInterval(interval);
-  }, []); // placeholders is a constant, no need for dependency
-
-  // Memoized Hero Banner Component for better perf
+  // Memoized Hero Banner Component using isolated HomeHeroBanner to avoid whole-page re-renders
   const HeroBannerSection = useMemo(() => {
-    if (showBannerSkeleton) {
-      return (
-        <div className="px-4 md:px-0 py-2">
-          <HeroBannerSkeleton className="h-36 sm:h-44 lg:h-56 rounded-2xl" />
-        </div>
-      );
-    }
-
-    if (heroBannerImages.length === 0) return null;
-
     return (
-      <div className="px-4 md:px-0 py-2">
-        <div
-          ref={heroShellRef}
-          data-home-hero-shell="true"
-          className="relative w-full overflow-hidden aspect-[16/9] md:aspect-[21/9] lg:aspect-[2.5/1] rounded-2xl shadow-sm group cursor-pointer bg-white"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-        >
-          <div className="absolute inset-0 z-0">
-            {/* Shining Glint Effect */}
-            <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-              <motion.div
-                animate={{
-                  x: ['-200%', '200%'],
-                }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  repeatDelay: 5,
-                  ease: "easeInOut"
-                }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg] w-[150%] h-full"
-              />
-            </div>
-            {heroBannerImages.map((image, index) => (
-              <div
-                key={`${index}-${image}`}
-                className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-                style={{
-                  opacity: currentBannerIndex === index ? 1 : 0,
-                  zIndex: currentBannerIndex === index ? 2 : 1,
-                  pointerEvents: "none",
-                }}>
-                <img
-                  src={image}
-                  alt={`Hero Banner ${index + 1}`}
-                  className="h-full w-full object-cover"
-                  loading={index === currentBannerIndex ? "eager" : "lazy"}
-                  fetchPriority={index === currentBannerIndex ? "high" : "low"}
-                  draggable={false}
-                />
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            className="absolute inset-0 z-20 h-full w-full border-0 p-0 bg-transparent text-left cursor-pointer"
-            onClick={() => {
-              const bannerData = heroBannersData[currentBannerIndex];
-              if (!bannerData) return;
-
-              // 1. If banner is linked to a food category, redirect to the category page
-              const catSlug = bannerData.categorySlug || (bannerData.categoryName ? slugifyCategory(bannerData.categoryName) : "");
-              if (catSlug) {
-                navigate(`/food/user/category/${catSlug}`);
-                return;
-              }
-
-              // 2. Fallback to linked restaurant if any
-              const linkedRestaurants = bannerData?.linkedRestaurants || [];
-              if (linkedRestaurants.length > 0) {
-                const firstRestaurant = linkedRestaurants[0];
-                const restaurantSlug = firstRestaurant.slug || firstRestaurant.restaurantId || firstRestaurant._id;
-                navigate(`/restaurants/${restaurantSlug}`);
-              }
-            }}
-            aria-label={`Open hero banner ${currentBannerIndex + 1}`}
-          />
-
-          {/* Desktop Navigation Arrows */}
-          {heroBannerImages.length > 1 && (
-            <>
-              <button 
-                onClick={(e) => { e.stopPropagation(); setCurrentBannerIndex((prev) => (prev - 1 + heroBannerImages.length) % heroBannerImages.length); }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm transition-all hover:scale-105"
-                aria-label="Previous banner"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length); }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-30 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-white/80 hover:bg-white text-gray-800 shadow-md backdrop-blur-sm transition-all hover:scale-105"
-                aria-label="Next banner"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-            </>
-          )}
-
-          {/* Indicators removed as requested */}
-        </div>
-      </div>
+      <HomeHeroBanner
+        heroBannerImages={heroBannerImages}
+        heroBannersData={heroBannersData}
+        showBannerSkeleton={showBannerSkeleton}
+        slugifyCategory={slugifyCategory}
+        navigate={navigate}
+        heroShellRef={heroShellRef}
+      />
     );
-  }, [heroBannerImages, currentBannerIndex, showBannerSkeleton, heroBannersData, navigate]);
+  }, [heroBannerImages, heroBannersData, showBannerSkeleton, slugifyCategory, navigate]);
 
   // Memoized Category Rail Component
   const CategoryRailSection = useMemo(() => {
@@ -2782,7 +2783,6 @@ export default function Home() {
                 location={effectiveLocation}
                 handleLocationClick={handleLocationClick}
                 handleSearchFocus={handleSearchFocus}
-                placeholderIndex={placeholderIndex}
                 placeholders={placeholders}
                 vegMode={vegMode}
                 handleVegModeChange={handleVegModeChange}

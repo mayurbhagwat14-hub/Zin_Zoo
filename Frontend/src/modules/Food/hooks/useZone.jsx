@@ -227,8 +227,8 @@ export function useZone(location) {
     const lat = roundCoord(location?.latitude, 6)
     const lng = roundCoord(location?.longitude, 6)
 
-    // Check if coordinates have changed significantly (threshold: ~10 meters)
-    const coordThreshold = 0.0001; // approximately 10 meters
+    // Check if coordinates have changed significantly (~80-90m threshold to prevent jitter re-triggers)
+    const coordThreshold = 0.0008;
     const coordsChanged =
       !prevCoordsRef.current.latitude ||
       !prevCoordsRef.current.longitude ||

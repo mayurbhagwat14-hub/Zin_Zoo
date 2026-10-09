@@ -1224,7 +1224,8 @@ export function useLocation() {
               }
             }
 
-            const coordThreshold = 0.0001
+            // Filter out minor GPS drift jitter (~80-90m threshold) so stationary devices don't trigger repeated location updates
+            const coordThreshold = 0.0008
             const coordsChanged =
               !prevLocationCoordsRef.current.latitude ||
               !prevLocationCoordsRef.current.longitude ||

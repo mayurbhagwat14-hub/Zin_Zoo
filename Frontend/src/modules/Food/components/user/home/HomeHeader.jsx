@@ -25,6 +25,17 @@ const ICON_MAP = {
   AlertCircle
 };
 
+const DEFAULT_PLACEHOLDERS = [
+  'Search "burger"',
+  'Search "biryani"',
+  'Search "pizza"',
+  'Search "desserts"',
+  'Search "chinese"',
+  'Search "thali"',
+  'Search "momos"',
+  'Search "dosa"',
+];
+
 export default function HomeHeader({
   activeTab,
   setActiveTab,
@@ -37,6 +48,18 @@ export default function HomeHeader({
   vegMode = false,
   handleVegModeChange
 }) {
+  const activePlaceholders = placeholders && placeholders.length > 0 ? placeholders : DEFAULT_PLACEHOLDERS;
+  const [internalIndex, setInternalIndex] = useState(0);
+
+  useEffect(() => {
+    if (placeholderIndex !== undefined) return;
+    const interval = setInterval(() => {
+      setInternalIndex((prev) => (prev + 1) % activePlaceholders.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [placeholderIndex, activePlaceholders.length]);
+
+  const currentPlaceholderIndex = placeholderIndex !== undefined ? placeholderIndex : internalIndex;
 
 
   return (
@@ -158,14 +181,14 @@ export default function HomeHeader({
           <div className="flex-1 overflow-hidden relative h-4.5">
             <AnimatePresence mode="wait">
               <motion.span
-                key={placeholderIndex}
+                key={currentPlaceholderIndex}
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -10, opacity: 0 }}
                 transition={{ duration: 0.2 }}
                 className="absolute inset-0 text-xs font-bold text-gray-400 truncate flex items-center"
               >
-                {placeholders?.[placeholderIndex] || 'Search'}
+                {activePlaceholders?.[currentPlaceholderIndex] || 'Search'}
               </motion.span>
             </AnimatePresence>
           </div>
