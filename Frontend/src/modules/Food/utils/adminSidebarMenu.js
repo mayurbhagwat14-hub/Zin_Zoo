@@ -232,6 +232,7 @@ export const adminSidebarMenu = [
     label: "SYSTEM SETTINGS",
     items: [
       { type: "link", label: "Zone Setup", path: "/admin/food/zones", icon: "MapPin" },
+      { type: "link", label: "Delivery & Fee Settings", path: "/admin/food/fee-settings", icon: "CreditCard" },
       { type: "link", label: "Broadcast Notification", path: "/admin/food/broadcast-notification", icon: "Bell" },
       { type: "link", label: "Business Setup", path: "/admin/food/business-setup", icon: "Settings" },
     ],
