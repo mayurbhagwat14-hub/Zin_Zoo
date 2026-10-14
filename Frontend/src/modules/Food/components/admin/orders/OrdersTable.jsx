@@ -374,7 +374,7 @@ export default function OrdersTable({
                     <div className="flex flex-col min-w-[200px] max-w-md">
                       {order.items && Array.isArray(order.items) && order.items.length > 0 ? (
                         order.items.map((item, idx) => {
-                          const itemRestName = item.restaurantName || item.restaurant || "";
+                          const itemRestName = item.restaurantName || item.restaurant || order.restaurant || order.restaurantName || "";
                           const cls = getRestaurantColor(itemRestName);
                           return (
                             <div key={idx || item.itemId || idx} className="flex items-center justify-between gap-3 text-sm py-1.5 border-b border-slate-100 last:border-0">
@@ -399,7 +399,7 @@ export default function OrdersTable({
                                     {item.name || item.itemName || item.title || 'Unknown Item'}
                                   </span>
                                   {itemRestName && (
-                                    <span className={`inline-block w-fit text-[9px] font-bold px-1.5 py-0.5 rounded border mt-0.5 ${cls.bg} ${cls.text} ${cls.border}`}>
+                                    <span className={`inline-block w-fit text-[9.5px] font-bold px-2 py-0.5 rounded-md border mt-1 shadow-2xs ${cls.bg} ${cls.text} ${cls.border}`}>
                                       {itemRestName}
                                     </span>
                                   )}
@@ -778,23 +778,46 @@ export default function OrdersTable({
                     <span>Items ({items.length})</span>
                   </div>
                   <div className="bg-white rounded-lg border border-slate-100 divide-y divide-slate-100">
-                    {displayedItems.map((item, iIdx) => (
-                      <div key={iIdx} className="p-2 flex items-center justify-between text-xs gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] shrink-0">
-                            {item.quantity || 1}x
-                          </span>
-                          <span className="font-medium text-slate-800 truncate">
-                            {item.name || item.itemName || item.title || "Item"}
-                          </span>
+                    {displayedItems.map((item, iIdx) => {
+                      const itemRestName = item.restaurantName || item.restaurant || order.restaurant || order.restaurantName || ""
+                      const cls = getRestaurantColor(itemRestName)
+                      return (
+                        <div key={iIdx} className="p-2.5 flex items-center justify-between text-xs gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name || "Item"}
+                                className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                                onError={(e) => { e.target.style.display = 'none' }}
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                <Package className="w-4 h-4 text-slate-400" />
+                              </div>
+                            )}
+                            <span className="font-bold text-slate-600 dark:text-slate-400 min-w-[1.5rem] shrink-0">
+                              {item.quantity || 1}x
+                            </span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                {item.name || item.itemName || item.title || "Item"}
+                              </span>
+                              {itemRestName && (
+                                <span className={`inline-block w-fit text-[9.5px] font-bold px-2 py-0.5 rounded-md border mt-1 shadow-2xs ${cls.bg} ${cls.text} ${cls.border}`}>
+                                  {itemRestName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {item.price && (
+                            <span className="font-bold text-slate-800 dark:text-slate-200 shrink-0 ml-2">
+                              ₹{item.price}
+                            </span>
+                          )}
                         </div>
-                        {item.price && (
-                          <span className="font-semibold text-slate-700 shrink-0">
-                            ₹{item.price}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                   {items.length > 2 && (
                     <button

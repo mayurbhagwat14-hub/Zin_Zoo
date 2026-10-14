@@ -103,7 +103,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
   const groupedItems = {}
   if (order.items && Array.isArray(order.items)) {
     order.items.forEach((item) => {
-      const rName = item.restaurantName || "Default Kitchen"
+      const rName = item.restaurantName || item.restaurant || order.restaurant || order.restaurantName || "Store"
       if (!groupedItems[rName]) {
         groupedItems[rName] = []
       }
@@ -301,7 +301,7 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
               <div className="space-y-6">
                 {Object.entries(groupedItems).map(([restaurantName, items]) => (
                   <div key={restaurantName} className="space-y-3">
-                    {isFoodOrder && (
+                    {restaurantName && restaurantName !== "Default Kitchen" && (
                       <div className="flex items-center gap-2 border-b border-dashed border-slate-200 dark:border-slate-800 pb-2">
                         <span className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-md">
                           {restaurantName}
