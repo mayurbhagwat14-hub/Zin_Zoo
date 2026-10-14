@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Search,
@@ -888,7 +888,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
           "transform transition-all duration-300 ease-in-out",
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "w-20" : "w-80"
+          isCollapsed ? "lg:w-20 w-80" : "w-80"
         )}
       >
         {/* Header with Logo and Brand */}

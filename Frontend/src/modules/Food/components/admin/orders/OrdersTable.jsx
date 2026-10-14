@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Eye, Printer, ArrowUpDown, Loader2, Check, X, Trash2, RefreshCw, Volume2, Package, Truck, CheckCircle2 } from "lucide-react"
+import { Eye, Printer, ArrowUpDown, Loader2, Check, X, Trash2, RefreshCw, Volume2, Package, Truck, CheckCircle2, Phone, ChevronDown, ChevronUp } from "lucide-react"
 
 const getStatusColor = (orderStatus) => {
   const colors = {
@@ -18,6 +18,50 @@ const getPaymentStatusColor = (paymentStatus) => {
   if (paymentStatus === "Refunded") return "text-sky-600"
   if (paymentStatus === "Unpaid" || paymentStatus === "Failed") return "text-red-600"
   return "text-slate-600"
+}
+
+const getPaymentTypeDisplay = (order) => {
+  let paymentTypeDisplay = order.paymentType
+  if (!paymentTypeDisplay) {
+    const paymentMethod = order.payment?.method || order.paymentMethod
+    if (paymentMethod === "cash" || paymentMethod === "cod") {
+      paymentTypeDisplay = "Cash on Delivery"
+    } else if (paymentMethod === "wallet") {
+      paymentTypeDisplay = "Wallet"
+    } else {
+      paymentTypeDisplay = "Online"
+    }
+  }
+  const paymentMethod = order.payment?.method || order.paymentMethod
+  if (paymentMethod === "wallet" && paymentTypeDisplay !== "Wallet") {
+    paymentTypeDisplay = "Wallet"
+  }
+  return paymentTypeDisplay
+}
+
+const isRefundEligible = (order) => {
+  const isCancelled =
+    order.orderStatus === "Cancelled by Restaurant" ||
+    order.orderStatus === "Cancelled" ||
+    order.orderStatus === "Cancelled by User" ||
+    order.orderStatus === "Canceled" ||
+    (order.status === "cancelled" && (order.cancelledBy === "user" || order.cancelledBy === "restaurant"))
+
+  const paymentMethod = order.payment?.method || order.paymentMethod
+  const isOnlinePayment =
+    order.paymentType === "Online" ||
+    (order.paymentType !== "Cash on Delivery" &&
+      order.payment?.method !== "cash" &&
+      order.payment?.method !== "cod" &&
+      (order.paymentMethod === "razorpay" ||
+        order.paymentMethod === "online" ||
+        order.payment?.paymentMethod === "razorpay" ||
+        order.payment?.method === "razorpay" ||
+        order.payment?.method === "online"))
+
+  const isWalletPayment = order.paymentType === "Wallet" || paymentMethod === "wallet"
+
+  return isCancelled && (isOnlinePayment || isWalletPayment)
 }
 
 const getRestaurantColor = (name) => {
@@ -97,6 +141,7 @@ export default function OrdersTable({
   showAssignedDeliveryPartner = false,
 }) {
   const [currentPage, setCurrentPage] = useState(1)
+  const [expandedItems, setExpandedItems] = useState({})
   const itemsPerPage = 10
   const totalPages = Math.ceil(orders.length / itemsPerPage)
 
@@ -170,7 +215,8 @@ export default function OrdersTable({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden w-full max-w-full">
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full min-w-full">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -649,10 +695,299 @@ export default function OrdersTable({
         </table>
       </div>
 
+      {/* Mobile Card View (visible only on small/mobile screens) */}
+      <div className="md:hidden divide-y divide-slate-100 bg-white">
+        {paginatedOrders.map((order, index) => {
+          const paymentTypeDisplay = getPaymentTypeDisplay(order)
+          const isCod = paymentTypeDisplay === "Cash on Delivery"
+          const isWallet = paymentTypeDisplay === "Wallet"
+          const isOrderLoading = actionLoadingOrderId === (order.id || order.orderId)
+          const isDeleting = deletingOrderId === (order.id || order.orderId)
+          const orderStatusLower = String(order.orderStatus || "").trim().toLowerCase()
+          const isExpanded = expandedItems[order.orderId || order.id]
+          const rawAmount = order.totalAmount ?? order.total ?? order.pricing?.total ?? 0
+          const amount = Number.isFinite(Number(rawAmount)) ? Number(rawAmount) : 0
+          const items = Array.isArray(order.items) ? order.items : []
+          const displayedItems = isExpanded ? items : items.slice(0, 2)
+
+          return (
+            <div key={order.orderId || order.id || index} className="p-4 space-y-3 hover:bg-slate-50/60 transition-colors">
+              {/* Header: Order ID + Status */}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-400">
+                      #{((currentPage - 1) * itemsPerPage) + index + 1}
+                    </span>
+                    <span className="text-sm font-bold text-slate-900 tracking-tight">
+                      {order.orderId}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 font-medium">
+                    {order.date}, {order.time}
+                  </div>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 shadow-2xs ${getStatusColor(order.orderStatus)}`}>
+                  {order.orderStatus}
+                </span>
+              </div>
+
+              {/* Customer & Restaurant info */}
+              <div className="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-3 border border-slate-100 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-slate-800 truncate">{order.customerName}</p>
+                    {order.customerPhone && order.customerPhone !== "N/A" && (
+                      <p className="text-[11px] text-slate-500 font-medium">{order.customerPhone}</p>
+                    )}
+                  </div>
+                  {order.customerPhone && order.customerPhone !== "N/A" && (
+                    <a
+                      href={`tel:${order.customerPhone}`}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 text-xs font-semibold flex items-center gap-1.5 shrink-0 active:scale-95 transition-all"
+                      title="Call Customer"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Call</span>
+                    </a>
+                  )}
+                </div>
+
+                {order.restaurant && (
+                  <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-800 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Store:</span>
+                    {order.restaurant.split(", ").map((rName, idx) => {
+                      const cls = getRestaurantColor(rName)
+                      return (
+                        <span
+                          key={idx}
+                          className={`inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-md border ${cls.bg} ${cls.text} ${cls.border}`}
+                        >
+                          {rName}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Items List */}
+              {items.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                    <span>Items ({items.length})</span>
+                  </div>
+                  <div className="bg-white rounded-lg border border-slate-100 divide-y divide-slate-100">
+                    {displayedItems.map((item, iIdx) => (
+                      <div key={iIdx} className="p-2 flex items-center justify-between text-xs gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded text-[10px] shrink-0">
+                            {item.quantity || 1}x
+                          </span>
+                          <span className="font-medium text-slate-800 truncate">
+                            {item.name || item.itemName || item.title || "Item"}
+                          </span>
+                        </div>
+                        {item.price && (
+                          <span className="font-semibold text-slate-700 shrink-0">
+                            ₹{item.price}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {items.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setExpandedItems(prev => ({ ...prev, [order.orderId || order.id]: !isExpanded }))}
+                      className="text-[11px] text-blue-600 font-semibold hover:underline flex items-center gap-1 py-1"
+                    >
+                      {isExpanded ? (
+                        <>Show less <ChevronUp className="w-3.5 h-3.5" /></>
+                      ) : (
+                        <>+{items.length - 2} more items <ChevronDown className="w-3.5 h-3.5" /></>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Amount & Payment Info */}
+              <div className="flex items-center justify-between py-2 border-t border-slate-100">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Amount</span>
+                  <span className="text-base font-extrabold text-slate-900">
+                    ₹{amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold border ${
+                    isCod ? "bg-amber-50 text-amber-700 border-amber-200" :
+                    isWallet ? "bg-purple-50 text-purple-700 border-purple-200" :
+                    "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  }`}>
+                    {paymentTypeDisplay}
+                  </span>
+                  <div className={`text-[11px] font-semibold mt-0.5 ${getPaymentStatusColor(order.paymentStatus)}`}>
+                    {order.paymentStatus || "Pending"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons: Touch-optimized, minimum 44px tap targets */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                {/* Primary Lifecycle Status Button */}
+                {orderStatusLower === "pending" && onAcceptOrder && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onAcceptOrder(order)}
+                      disabled={isOrderLoading}
+                      className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {isOrderLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4 stroke-[3]" />
+                          <span>Accept Order</span>
+                        </>
+                      )}
+                    </button>
+                    {canShowCancelAction(order) && onCancelOrder && (
+                      <button
+                        onClick={() => onCancelOrder(order)}
+                        disabled={isOrderLoading}
+                        className="min-h-[44px] px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-semibold text-xs flex items-center justify-center gap-1 active:scale-[0.98] transition-all disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4 stroke-[2.5]" />
+                        <span>Reject</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {(orderStatusLower === "accepted" || orderStatusLower === "confirmed") && onUpdateStatus && (
+                  <button
+                    onClick={() => onUpdateStatus(order, "preparing")}
+                    disabled={isOrderLoading}
+                    className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {isOrderLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Package className="w-4 h-4" />
+                        <span>Start Processing</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {(orderStatusLower === "processing" || orderStatusLower === "preparing") && onUpdateStatus && (
+                  <button
+                    onClick={() => onUpdateStatus(order, "ready_for_pickup")}
+                    disabled={isOrderLoading}
+                    className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {isOrderLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 stroke-[3]" />
+                        <span>Mark Ready for Pickup</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {(orderStatusLower === "ready_for_pickup" || orderStatusLower === "ready") && onUpdateStatus && (
+                  <button
+                    onClick={() => onUpdateStatus(order, "delivered")}
+                    disabled={isOrderLoading}
+                    className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {isOrderLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Mark Delivered</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Refund button if eligible */}
+                {isRefundEligible(order) && (
+                  order.refundStatus === "processed" || order.refundStatus === "initiated" ? (
+                    <div className="w-full text-center py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200">
+                      {order.paymentType === "Wallet" || order.payment?.method === "wallet" ? "Wallet Refunded" : "Refunded"}
+                    </div>
+                  ) : onRefund ? (
+                    <button
+                      onClick={() => onRefund(order)}
+                      className={`w-full min-h-[42px] px-4 py-2 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all ${
+                        order.paymentType === "Wallet" || order.payment?.method === "wallet"
+                          ? "bg-purple-600 hover:bg-purple-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      }`}
+                    >
+                      <span>₹ Process Refund</span>
+                    </button>
+                  ) : null
+                )}
+
+                {/* Utility Buttons: View Details, Print, Cancel, Delete */}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => onViewOrder(order)}
+                    className="flex-1 min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-[0.98] transition-all"
+                  >
+                    <Eye className="w-4 h-4 text-orange-500" />
+                    <span>Details</span>
+                  </button>
+
+                  <button
+                    onClick={() => onPrintOrder(order)}
+                    className="flex-1 min-h-[42px] px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-[0.98] transition-all"
+                  >
+                    <Printer className="w-4 h-4 text-blue-500" />
+                    <span>Print</span>
+                  </button>
+
+                  {orderStatusLower !== "pending" && canShowCancelAction(order) && onCancelOrder && (
+                    <button
+                      onClick={() => onCancelOrder(order)}
+                      disabled={isOrderLoading}
+                      className="min-h-[42px] px-3 py-2 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-600 font-semibold text-xs flex items-center justify-center gap-1 active:scale-[0.98] transition-all disabled:opacity-50"
+                      title="Cancel Order"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Cancel</span>
+                    </button>
+                  )}
+
+                  {onDeleteOrder && (
+                    <button
+                      onClick={() => onDeleteOrder(order)}
+                      disabled={isDeleting}
+                      className="min-h-[42px] px-3 py-2 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 font-semibold text-xs flex items-center justify-center shadow-2xs active:scale-[0.98] transition-all disabled:opacity-50"
+                      title="Delete Order"
+                    >
+                      {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-sm text-slate-600">
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs sm:text-sm text-slate-600 text-center sm:text-left">
             Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
             <span className="font-semibold">{Math.min(currentPage * itemsPerPage, orders.length)}</span> of{" "}
             <span className="font-semibold">{orders.length}</span> orders
@@ -661,7 +996,7 @@ export default function OrdersTable({
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
             >
               Previous
             </button>
@@ -681,7 +1016,7 @@ export default function OrdersTable({
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${currentPage === pageNum
+                    className={`px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all min-h-[38px] ${currentPage === pageNum
                         ? "bg-emerald-500 text-white shadow-md"
                         : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                       }`}
@@ -694,7 +1029,7 @@ export default function OrdersTable({
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
             >
               Next
             </button>

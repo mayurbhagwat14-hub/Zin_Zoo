@@ -925,15 +925,15 @@ export default function GroceryOrdersPage({ statusKey = "all" }) {
 
   if (showLoadingSkeleton) {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-4 lg:p-6">
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-2.5 sm:p-4 lg:p-6">
         <OrdersDashboardSkeleton />
       </div>
     )
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden">
-      <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Grocery Orders</h1>
+    <div className="p-2.5 sm:p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden">
+      <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mb-2 sm:mb-3">Grocery Orders</h1>
       <OrdersTopbar 
         title={config.title} 
         count={count} 

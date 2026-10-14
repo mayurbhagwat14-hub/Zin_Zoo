@@ -39,7 +39,7 @@ export default function OrdersTopbar({
             </span>
           </h1>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <div className="relative w-full sm:w-auto sm:flex-initial">
             <input
               type="text"
@@ -52,51 +52,54 @@ export default function OrdersTopbar({
               <Search className="w-4 h-4 text-slate-500" />
             </button>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all">
-                <Download className="w-4 h-4" />
-                <span className="text-black font-bold">Export</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-50 text-slate-700 dark:text-slate-200">
-              <DropdownMenuLabel className="dark:text-slate-300">Export Format</DropdownMenuLabel>
-              <DropdownMenuSeparator className="dark:bg-slate-800" />
-              <DropdownMenuItem onClick={() => onExport("excel")} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 focus:bg-slate-50 focus:text-slate-900 dark:focus:bg-slate-800 dark:focus:text-white transition-colors">
-                <div className="w-6 h-6 rounded-md bg-green-50 dark:bg-green-950/30 flex items-center justify-center mr-3">
-                  <FileSpreadsheet className="w-4 h-4 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="font-medium text-slate-800 dark:text-slate-200">Excel</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExport("pdf")} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 focus:bg-slate-50 focus:text-slate-900 dark:focus:bg-slate-800 dark:focus:text-white transition-colors">
-                <div className="w-6 h-6 rounded-md bg-red-50 dark:bg-red-950/30 flex items-center justify-center mr-3">
-                  <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
-                </div>
-                <span className="font-medium text-slate-800 dark:text-slate-200">PDF</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <button 
-            onClick={onFilterClick}
-            className={`px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all relative ${
-              activeFiltersCount > 0 ? "border-emerald-500 bg-emerald-50" : ""
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span className="text-black font-bold">Filters</span>
-            {activeFiltersCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
-                {activeFiltersCount}
-              </span>
-            )}
-          </button>
-          <button 
-            onClick={onSettingsClick}
-            className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex-1 sm:flex-initial justify-center px-3.5 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all">
+                  <Download className="w-4 h-4" />
+                  <span className="text-black font-bold">Export</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-50 text-slate-700 dark:text-slate-200">
+                <DropdownMenuLabel className="dark:text-slate-300">Export Format</DropdownMenuLabel>
+                <DropdownMenuSeparator className="dark:bg-slate-800" />
+                <DropdownMenuItem onClick={() => onExport("excel")} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 focus:bg-slate-50 focus:text-slate-900 dark:focus:bg-slate-800 dark:focus:text-white transition-colors">
+                  <div className="w-6 h-6 rounded-md bg-green-50 dark:bg-green-950/30 flex items-center justify-center mr-3">
+                    <FileSpreadsheet className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">Excel</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onExport("pdf")} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 focus:bg-slate-50 focus:text-slate-900 dark:focus:bg-slate-800 dark:focus:text-white transition-colors">
+                  <div className="w-6 h-6 rounded-md bg-red-50 dark:bg-red-950/30 flex items-center justify-center mr-3">
+                    <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  </div>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">PDF</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button 
+              onClick={onFilterClick}
+              className={`flex-1 sm:flex-initial justify-center px-3.5 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all relative ${
+                activeFiltersCount > 0 ? "border-emerald-500 bg-emerald-50" : ""
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-black font-bold">Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+            <button 
+              onClick={onSettingsClick}
+              className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all shrink-0"
+              title="Table Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

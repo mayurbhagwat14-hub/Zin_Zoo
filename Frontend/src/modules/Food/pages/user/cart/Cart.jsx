@@ -208,7 +208,7 @@ export default function Cart() {
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponCode, setCouponCode] = useState("")
   const [manualCouponCode, setManualCouponCode] = useState("")
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("razorpay")
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [isCodEnabled, setIsCodEnabled] = useState(true)
   const [showPaymentSheet, setShowPaymentSheet] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
@@ -1250,11 +1250,7 @@ export default function Cart() {
     : null
   const platformFee = pricing?.platformFee ?? feeSettings.platformFee
   const gstCharges = pricing?.tax ?? Math.round(subtotal * (feeSettings.gstRate / 100))
-  const gstLabel = activeCartTab === 'grocery' || activeCartTab === 'accessories'
-    ? 'GST and Store Charges'
-    : (activeCartTab === 'all' && cart.some(i => i.moduleType === 'grocery' || i.moduleType === 'accessories') && !cart.some(i => (i.moduleType || 'food') === 'food')
-      ? 'GST and Store Charges'
-      : 'GST and Kitchen Charges')
+  const gstLabel = 'GST'
   const discount = pricing?.discount ?? (appliedCoupon ? Math.min(appliedCoupon.discount, subtotal * 0.5) : 0)
   const totalBeforeDiscount = subtotal + (deliveryFee === 0 ? Number(feeSettings.deliveryFee || 0) : deliveryFee) + platformFee + gstCharges
   const total = subtotal + deliveryFee + platformFee + gstCharges - (pricing?.discount ?? discount)
@@ -2886,11 +2882,7 @@ export default function Cart() {
                         )}
                       </span>
                     </div>
-                    {deliveryFeeBreakdownText && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
-                        {deliveryFeeBreakdownText}
-                      </div>
-                    )}
+
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
                       <span className="text-gray-800 dark:text-gray-200 font-medium">{RUPEE_SYMBOL}{platformFee.toFixed(2)}</span>
@@ -2911,6 +2903,42 @@ export default function Cart() {
                     </div>
                   </div>
                 )}
+
+                {/* Lowest Price & Zero Fee Banner - Professional Zepto-style seal design */}
+                <div className="mt-4 px-4 py-3 bg-[#FAF5FD] dark:bg-[#1f152b] border border-[#EEDBFA] dark:border-purple-900/40 rounded-2xl flex items-center justify-between gap-3 shadow-[0_1px_3px_rgba(147,51,234,0.06)]">
+                  <div className="flex-1 min-w-0 pr-2">
+                    <p className="text-xs sm:text-[13px] font-normal text-[#3a1852] dark:text-purple-200 leading-snug">
+                      No platform fee, No packaging fee &amp; Lowest item prices
+                    </p>
+                  </div>
+
+                  {/* Stamp Seal Badge */}
+                  <div className="shrink-0 flex items-center justify-center select-none">
+                    <svg width="88" height="48" viewBox="0 0 88 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-xs">
+                      <defs>
+                        <linearGradient id="sealLowestPriceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#A21CAF" />
+                          <stop offset="50%" stopColor="#9333EA" />
+                          <stop offset="100%" stopColor="#C026D3" />
+                        </linearGradient>
+                      </defs>
+                      {/* Top curved dashed seal arch */}
+                      <path d="M18 17C24 10 34 7 44 7C54 7 64 10 70 17" stroke="#A855F7" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1.5 2" />
+                      {/* Top text EVERYDAY */}
+                      <text x="44" y="16" textAnchor="middle" fill="#7E22CE" fontSize="8" fontWeight="800" letterSpacing="1.2" fontFamily="Inter, system-ui, -apple-system, sans-serif">
+                        EVERYDAY
+                      </text>
+                      {/* Bottom ribbon pill */}
+                      <rect x="4" y="21" width="80" height="20" rx="6" fill="url(#sealLowestPriceGrad)" />
+                      {/* LOWEST PRICE text */}
+                      <text x="44" y="34.5" textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="900" letterSpacing="0.4" fontFamily="Inter, system-ui, -apple-system, sans-serif">
+                        LOWEST PRICE
+                      </text>
+                      {/* Bottom curved dashed seal arch */}
+                      <path d="M22 45C30 47.5 38 48 44 48C50 48 58 47.5 66 45" stroke="#C084FC" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1.5 2" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -3295,14 +3323,6 @@ export default function Cart() {
 
                 <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar pb-4 flex-1 min-h-0">
                   {[
-                    {
-                      id: 'razorpay',
-                      name: 'Online Payment',
-                      description: 'Pay via UPI, Cards & NetBanking',
-                      icon: <Zap className="w-5 h-5" />,
-                      color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
-                      selectedColor: 'bg-orange-500 text-white'
-                    },
                     {
                       id: 'wallet',
                       name: 'Zinzoo Wallet',
