@@ -208,7 +208,7 @@ export default function Cart() {
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponCode, setCouponCode] = useState("")
   const [manualCouponCode, setManualCouponCode] = useState("")
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("razorpay")
   const [isCodEnabled, setIsCodEnabled] = useState(true)
   const [showPaymentSheet, setShowPaymentSheet] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
@@ -371,11 +371,7 @@ export default function Cart() {
     }
   }, [isCodEnabled, selectedPaymentMethod])
 
-  useEffect(() => {
-    if (selectedPaymentMethod === "razorpay") {
-      setSelectedPaymentMethod(isCodEnabled ? "cash" : "wallet")
-    }
-  }, [isCodEnabled, selectedPaymentMethod])
+
 
 
   const availableTimeSlots = useMemo(() => {
@@ -1264,9 +1260,11 @@ export default function Cart() {
   const total = subtotal + deliveryFee + platformFee + gstCharges - (pricing?.discount ?? discount)
   const savings = pricing?.savings ?? Math.max(0, totalBeforeDiscount - total)
   const selectedPaymentLabel =
-    selectedPaymentMethod === "wallet"
-      ? "Wallet"
-      : "Cash on Delivery"
+    selectedPaymentMethod === "razorpay"
+      ? "Online Payment"
+      : selectedPaymentMethod === "wallet"
+        ? "Wallet"
+        : "Cash on Delivery"
 
   // Restaurant name from data or cart
   const restaurantName = restaurantData?.name || cart[0]?.restaurant || "Restaurant"
@@ -3298,14 +3296,30 @@ export default function Cart() {
                 <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar pb-4 flex-1 min-h-0">
                   {[
                     {
+                      id: 'razorpay',
+                      name: 'Online Payment',
+                      description: 'Pay via UPI, Cards & NetBanking',
+                      icon: <Zap className="w-5 h-5" />,
+                      color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
+                      selectedColor: 'bg-orange-500 text-white'
+                    },
+                    {
+                      id: 'wallet',
+                      name: 'Zinzoo Wallet',
+                      description: `Available balance: ${RUPEE_SYMBOL}${walletBalance.toFixed(0)}`,
+                      icon: <Wallet className="w-5 h-5" />,
+                      color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
+                      selectedColor: 'bg-orange-500 text-white'
+                    },
+                    {
                       id: 'cash',
                       name: 'Cash on Delivery',
-                      description: 'Pay when order arrives',
+                      description: 'Pay with cash when order arrives',
                       icon: <Banknote className="w-5 h-5" />,
                       color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
                       selectedColor: 'bg-orange-500 text-white'
                     }
-                  ].filter((option) => isCodEnabled || option.id !== "cash").map((option) => (
+                  ].map((option) => (
                     <button
                       key={option.id}
                       onClick={() => {
