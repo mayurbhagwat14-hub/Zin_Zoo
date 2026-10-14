@@ -383,7 +383,7 @@ export const requestAdminForgotPasswordOtp = async (email) => {
 
   const otp = config.useDefaultOtp
     ? "123456"
-    : String(crypto.randomInt(100000, 999999));
+    : String(crypto.randomInt(100000, 1000000));
   const ttlMs = (config.otpExpiryMinutes || 10) * 60 * 1000;
   const expiresAt = new Date(Date.now() + ttlMs);
 

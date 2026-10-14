@@ -6,7 +6,7 @@ import { logger } from '../../utils/logger.js';
 import { ValidationError } from '../auth/errors.js';
 
 const generateOtpCode = () => {
-    const code = crypto.randomInt(1000, 9999);
+    const code = crypto.randomInt(1000, 10000);
     return String(code);
 };
 

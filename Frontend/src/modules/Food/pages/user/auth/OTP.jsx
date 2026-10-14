@@ -86,19 +86,7 @@ export default function OTP() {
     }
   }, [showNameInput])
 
-  // Auto OTP Verification
-  useEffect(() => {
-    if (authData && !showNameInput && !success && !error) {
-      setOtp(["1", "2", "3", "4"])
-      const timer = setTimeout(() => {
-        if (!submittingRef.current) {
-          handleVerify("1234")
-        }
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authData, showNameInput, success, error])
+
 
   const handleChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return
@@ -405,11 +393,8 @@ export default function OTP() {
             <AnimatePresence mode="wait">
               {!showNameInput ? (
                 <motion.div key="otp-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="w-full flex flex-col items-center">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-800 text-center tracking-tight mb-0.5">Verify OTP</h1>
-                  <p className="mt-1 mb-1 inline-flex items-center justify-center rounded-full bg-[#FF5E00]/10 px-4 py-1.5 text-[13px] sm:text-sm font-black text-[#FF5E00]">
-                    OTP - 1234
-                  </p>
-                  <p className="text-gray-500 text-center text-[11px] sm:text-[12px] font-medium leading-tight">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-800 text-center tracking-tight mb-1">Verify OTP</h1>
+                  <p className="text-gray-500 text-center text-[11px] sm:text-[12px] font-medium leading-tight mb-2">
                     We've sent a 4-digit OTP to<br/>
                     <span className="font-bold text-[#FF5E00] text-[12px] sm:text-[13px] tracking-wide">{contactInfo}</span>
                   </p>

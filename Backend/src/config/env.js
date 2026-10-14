@@ -25,7 +25,7 @@ export const config = {
     otpExpirySeconds: Number(process.env.OTP_EXPIRY_SECONDS || 300),
     otpRateLimit: Number(process.env.OTP_RATE_LIMIT || 3),
     otpRateWindow: Number(process.env.OTP_RATE_WINDOW || 600),
-    useDefaultOtp: process.env.USE_DEFAULT_OTP === 'true',
+    useDefaultOtp: String(process.env.USE_DEFAULT_OTP || '').trim().toLowerCase() === 'true',
 
     // SMS India Hub
     smsIndiaHubUsername: process.env.SMS_INDIA_HUB_USERNAME,
