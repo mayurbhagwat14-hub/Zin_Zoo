@@ -156,7 +156,6 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ phone: 1 }, { unique: true });
 userSchema.index({ 'addresses.location': '2dsphere' });
-userSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 
 export const FoodUser = mongoose.model('FoodUser', userSchema);
 

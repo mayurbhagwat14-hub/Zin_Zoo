@@ -38,7 +38,7 @@ const imageUrlToDataUrl = async (url) => {
   }
 }
 
-export const generateThermalInvoice = async (order, moduleType = "food", fallbackGst = null) => {
+export const generateThermalInvoice = async (order, moduleType = "food", fallbackGst = null, options = {}) => {
     try {
       const { default: jsPDF } = await import("jspdf")
       const { default: QRCode } = await import("qrcode")
@@ -52,7 +52,7 @@ export const generateThermalInvoice = async (order, moduleType = "food", fallbac
       }).toUpperCase()
 
       // Calculate and gather info
-      let platformGstNumber = order?.pricing?.platformGstNumber || fallbackGst || "27AAPFU0939F1ZV";
+      let platformGstNumber = options?.hideGst ? null : (order?.pricing?.platformGstNumber || fallbackGst || "27AAPFU0939F1ZV");
       
       const receiptWidth = 72 // slightly wider to fit the new layout better, standard 80mm printer paper has ~72mm printable area
       const margin = 4

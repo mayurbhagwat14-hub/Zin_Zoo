@@ -246,8 +246,8 @@ export default function Orders() {
               preparationTime: order.preparationTime || 0,
               deliveredAt: order.deliveredAt || null,
               deliveryPartnerId: order.deliveryPartnerId?._id || order.deliveryPartnerId || null,
-              deliveryPartnerName: order.deliveryPartnerId?.name || order.deliveryPartnerName || null,
-              deliveryPartnerPhone: order.deliveryPartnerId?.phone || order.deliveryPartnerPhone || null,
+              deliveryPartnerName: 'Vishnu',
+              deliveryPartnerPhone: '8225874798',
               note: order.note || null,
               moduleType: order.moduleType || 'food'
             }
