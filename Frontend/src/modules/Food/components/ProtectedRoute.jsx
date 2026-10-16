@@ -44,9 +44,16 @@ async function silentRefresh(module) {
   try { localStorage.setItem(lockKey, String(Date.now())); } catch (_) {}
 
   try {
-    const refreshUrl = baseURL
-      ? `${baseURL}/food/auth/refresh-token`
-      : "/api/v1/food/auth/refresh-token";
+    let refreshUrl = "/api/v1/food/auth/refresh-token";
+    if (baseURL) {
+      if (baseURL.endsWith("/api/v1")) {
+        refreshUrl = `${baseURL}/food/auth/refresh-token`;
+      } else if (baseURL.endsWith("/api")) {
+        refreshUrl = `${baseURL}/v1/food/auth/refresh-token`;
+      } else {
+        refreshUrl = `${baseURL}/api/v1/food/auth/refresh-token`;
+      }
+    }
     const { data } = await axios.post(refreshUrl, { refreshToken }, { timeout: 10000 });
     const newAccessToken = data?.data?.accessToken || data?.accessToken;
     const newRefreshToken = data?.data?.refreshToken || data?.refreshToken;

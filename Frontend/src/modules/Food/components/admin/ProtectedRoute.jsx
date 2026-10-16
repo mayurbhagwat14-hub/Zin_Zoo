@@ -36,10 +36,17 @@ export default function ProtectedRoute({ children }) {
           setChecking(false)
         }
       } catch (_error) {
-        clearModuleAuth("admin")
-        if (isMounted) {
-          setAuthError(true)
-          setChecking(false)
+        if (_error?.response?.status === 401 || _error?.response?.status === 403) {
+          clearModuleAuth("admin");
+          if (isMounted) {
+            setAuthError(true);
+            setChecking(false);
+          }
+        } else {
+          // Network or server error - don't kick user out
+          if (isMounted) {
+            setChecking(false);
+          }
         }
       }
     }

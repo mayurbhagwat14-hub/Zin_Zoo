@@ -396,9 +396,17 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      // Use relative URL so this works both with an explicit baseURL and with a dev proxy.
-      // Use plain axios to avoid interceptor recursion.
-      const refreshUrl = baseURL ? `${baseURL}/food/auth/refresh-token` : "/api/v1/food/auth/refresh-token";
+      // Use normalized URL so this works both with baseURL (e.g. /api/v1 or origin) and with dev proxy.
+      let refreshUrl = "/api/v1/food/auth/refresh-token";
+      if (baseURL) {
+        if (baseURL.endsWith("/api/v1")) {
+          refreshUrl = `${baseURL}/food/auth/refresh-token`;
+        } else if (baseURL.endsWith("/api")) {
+          refreshUrl = `${baseURL}/v1/food/auth/refresh-token`;
+        } else {
+          refreshUrl = `${baseURL}/api/v1/food/auth/refresh-token`;
+        }
+      }
       const { data } = await axios.post(refreshUrl, { refreshToken }, { timeout: 10000 });
       const newAccessToken = data?.data?.accessToken || data?.accessToken;
       const newRefreshToken = data?.data?.refreshToken || data?.refreshToken;

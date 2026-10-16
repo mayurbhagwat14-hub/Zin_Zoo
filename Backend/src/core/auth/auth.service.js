@@ -133,7 +133,7 @@ export const verifyUserOtpAndLogin = async (
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
 
-  const ttlMs = ms(config.jwtRefreshExpiresIn || "7d");
+  const ttlMs = ms(config.jwtRefreshExpiresIn || "90d");
   const expiresAt = new Date(Date.now() + ttlMs);
 
   await FoodRefreshToken.create({
@@ -177,7 +177,7 @@ export const adminLogin = async (email, password) => {
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
 
-  const ttlMs = ms(config.jwtRefreshExpiresIn || "7d");
+  const ttlMs = ms(config.jwtRefreshExpiresIn || "90d");
   const expiresAt = new Date(Date.now() + ttlMs);
 
   await FoodRefreshToken.create({
@@ -497,11 +497,7 @@ export const refreshAccessToken = async (token) => {
     }
   }
 
-  // --- Token Rotation ---
-  // Delete the used refresh token and issue a brand-new one.
-  // This means every stolen/leaked refresh token can only be used once.
-  await FoodRefreshToken.deleteOne({ token });
-
+  // Issue fresh tokens
   const newAccessToken = signAccessToken({
     userId: payload.userId,
     role: payload.role,
@@ -511,14 +507,23 @@ export const refreshAccessToken = async (token) => {
     role: payload.role,
   });
 
-  const ttlMs = ms(config.jwtRefreshExpiresIn || "7d");
+  const ttlMs = ms(config.jwtRefreshExpiresIn || "90d");
   const expiresAt = new Date(Date.now() + ttlMs);
 
+  // Store the new refresh token
   await FoodRefreshToken.create({
     userId: payload.userId,
     token: newRefreshToken,
     expiresAt,
   });
+
+  // Gracefully delete the used refresh token after a 60-second grace period.
+  // This prevents race conditions when concurrent requests or multiple tabs refresh simultaneously.
+  setTimeout(async () => {
+    try {
+      await FoodRefreshToken.deleteOne({ token });
+    } catch (_) {}
+  }, 60000);
 
   return { accessToken: newAccessToken, refreshToken: newRefreshToken };
 };

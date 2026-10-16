@@ -107,8 +107,10 @@ export function getCurrentUserRole(module = null) {
     if (!token) return null;
     
     if (isTokenExpired(token)) {
-      // Token expired, clear it
-      clearModuleAuth(module);
+      const refreshToken = getModuleRefreshToken(module);
+      if (refreshToken && !isTokenExpired(refreshToken)) {
+        return getRoleFromToken(token) || getRoleFromToken(refreshToken) || module;
+      }
       return null;
     }
     
@@ -135,14 +137,16 @@ export function getCurrentUserRole(module = null) {
  */
 export function isModuleAuthenticated(module) {
   const token = getModuleToken(module);
-  if (!token) return false;
-  
-  if (isTokenExpired(token)) {
-    clearModuleAuth(module);
-    return false;
+  if (token && !isTokenExpired(token)) {
+    return true;
   }
   
-  return true;
+  const refreshToken = getModuleRefreshToken(module);
+  if (refreshToken && !isTokenExpired(refreshToken)) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**

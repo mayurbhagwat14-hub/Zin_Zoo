@@ -138,7 +138,15 @@ export function getCurrentUser(module) {
  */
 export function isModuleAuthenticated(module) {
   const token = getModuleToken(module);
-  return !!token && !isTokenExpired(token);
+  if (token && !isTokenExpired(token)) {
+    return true;
+  }
+  // If access token is expired or missing, check if a valid refresh token exists
+  const refreshToken = getModuleRefreshToken(module);
+  if (refreshToken && !isTokenExpired(refreshToken)) {
+    return true;
+  }
+  return false;
 }
 
 /**
