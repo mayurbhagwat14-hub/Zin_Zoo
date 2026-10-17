@@ -290,24 +290,24 @@ export default function AdminNavbar({ onMenuClick }) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white dark:bg-[#1a1a1a] border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-3">
+      <header className="sticky top-0 z-40 bg-white dark:bg-[#1a1a1a] border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 gap-2">
           {/* Left: Logo and Mobile Menu */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={onMenuClick}
-              className="lg:hidden p-2 rounded-md text-neutral-700 hover:bg-neutral-100 hover:text-black transition-colors"
+              className="lg:hidden p-2 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               aria-label="Toggle menu"
             >
               <Menu className="w-5 h-5" />
             </button>
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-32 h-12 flex items-center justify-center overflow-hidden">
+              <div className="w-24 sm:w-32 h-9 sm:h-12 flex items-center justify-center overflow-hidden">
                 <img
                   src="/zinzoo-logo.png"
                   alt={businessSettings?.companyName || "Company"}
-                  className="w-[200px] h-[200px] max-w-none object-contain"
+                  className="w-[160px] sm:w-[200px] h-[160px] sm:h-[200px] max-w-none object-contain"
                   style={{ mixBlendMode: "multiply" }}
                   loading="lazy"
                 />
@@ -315,8 +315,8 @@ export default function AdminNavbar({ onMenuClick }) {
             </div>
           </div>
 
-          {/* Center: Search Bar */}
-          <div className="flex-1 flex justify-center max-w-md mx-8">
+          {/* Center: Search Bar (Desktop) */}
+          <div className="flex-1 hidden md:flex justify-center max-w-md mx-4 lg:mx-8">
             <button
               onClick={() => setSearchOpen(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 dark:bg-[#262626] text-neutral-600 dark:text-neutral-400 cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors w-full border border-neutral-200 dark:border-neutral-800"
@@ -329,34 +329,44 @@ export default function AdminNavbar({ onMenuClick }) {
             </button>
           </div>
 
-          {/* Right: User Profile */}
-          <div className="flex items-center gap-3">
+          {/* Right: User Profile & Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            {/* Mobile Search Icon Button */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              type="button"
+              className="md:hidden h-9 w-9 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#262626] text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              aria-label="Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
               type="button"
-              className="h-11 w-11 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#262626] text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              className="h-9 w-9 sm:h-11 sm:w-11 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#262626] text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
               aria-label="Toggle theme"
             >
-              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              {theme === "dark" ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
             </button>
 
             <Popover open={notificationsOpen} onOpenChange={setNotificationsOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="relative h-11 w-11 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#262626] text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  className="relative h-9 w-9 sm:h-11 sm:w-11 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-[#262626] text-neutral-700 dark:text-neutral-300 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
                   aria-label="Notifications"
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                   {notificationCount > 0 && (
-                    <span className="absolute top-2 right-2 min-w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                    <span className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 min-w-3.5 h-3.5 sm:min-w-4 sm:h-4 rounded-full bg-amber-500 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center px-0.5 sm:px-1">
                       {notificationCount > 9 ? "9+" : notificationCount}
                     </span>
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-96 p-0 mt-2 border border-neutral-200 dark:border-neutral-800 shadow-2xl rounded-2xl overflow-hidden" align="end">
+              <PopoverContent className="w-[calc(100vw-2rem)] sm:w-96 p-0 mt-2 border border-neutral-200 dark:border-neutral-800 shadow-2xl rounded-2xl overflow-hidden" align="end">
                 <div className="bg-white dark:bg-[#1a1a1a]">
                   <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
                     <div>

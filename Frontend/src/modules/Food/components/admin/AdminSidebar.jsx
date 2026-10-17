@@ -461,6 +461,23 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
   }
 
   const [isCollapsed, setIsCollapsed] = useState(() => getInitialStates().isCollapsed)
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 1024
+    }
+    return false
+  })
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  // On mobile, sidebar is a drawer and should NEVER be collapsed into icon-only mode
+  const isEffectiveCollapsed = isMobile ? false : isCollapsed
   const [expandedSections, setExpandedSections] = useState(() => {
     const initialState = getInitialStates().expandedSections
     if (Object.keys(initialState || {}).length > 0) return initialState
@@ -679,17 +696,17 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
             isActive(item.path)
               ? "bg-white/20 text-white border border-white/25 font-semibold"
               : "text-white/80 hover:bg-white/10 hover:text-white",
-            isCollapsed && "justify-center px-2"
+            isEffectiveCollapsed && "justify-center px-2"
           )}
           style={{ animationDelay: `${index * 0.05}s` }}
-          title={isCollapsed ? displayLabel : undefined}
+          title={isEffectiveCollapsed ? displayLabel : undefined}
         >
           <Icon className={cn(
             "shrink-0 transition-all duration-300 text-left",
             isInSection ? "w-4 h-4" : "w-4 h-4",
             isActive(item.path) ? "text-white scale-110" : "text-white/80"
           )} />
-          {!isCollapsed && (
+          {!isEffectiveCollapsed && (
             <div className="flex-1 flex items-center justify-between overflow-hidden">
               <span className={cn("text-left truncate", isInSection ? "font-semibold" : "font-medium")}>
                 {displayLabel}
@@ -701,7 +718,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
               )}
             </div>
           )}
-          {isCollapsed && getBadgeCount(displayLabel, item.path) > 0 && (
+          {isEffectiveCollapsed && getBadgeCount(displayLabel, item.path) > 0 && (
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-neutral-950" />
           )}
         </Link>
@@ -713,7 +730,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
       const sectionKey = (parentSectionLabel ? `${parentSectionLabel}-${item.label}` : item.label).toLowerCase().replace(/\s+/g, "")
       const isExpanded = expandedSections[sectionKey] || false
 
-      if (isCollapsed) {
+      if (isEffectiveCollapsed) {
         return (
           <div key={index} className="menu-item-animate" style={{ animationDelay: `${index * 0.05}s` }}>
             <button
@@ -884,24 +901,24 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
       `}</style>
       <div
         className={cn(
-          "bg-[#F84E04] admin-sidebar border-r border-white/10 h-screen fixed left-0 top-0 z-50 flex flex-col overflow-hidden",
+          "bg-[#F84E04] admin-sidebar border-r border-white/10 h-screen fixed left-0 top-0 z-[60] lg:z-30 flex flex-col overflow-hidden shadow-2xl",
           "transform transition-all duration-300 ease-in-out",
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "lg:w-20 w-80" : "w-80"
+          isEffectiveCollapsed ? "w-20" : "w-80 max-w-[85vw]"
         )}
       >
         {/* Header with Logo and Brand */}
         <div className="shrink-0 px-3 py-3 border-b border-white/10 bg-transparent animate-[fadeIn_0.4s_ease-out]">
           <div className="flex items-center justify-between mb-3">
-            {!isCollapsed && (
+            {!isEffectiveCollapsed && (
               <div className="flex items-center gap-2 animate-[slideIn_0.3s_ease-out]">
-                <span className="text-2xl font-extrabold text-white tracking-wide">
+                <span className="text-xl sm:text-2xl font-extrabold text-white tracking-wide">
                   Admin Panel
                 </span>
               </div>
             )}
-            {isCollapsed && (
+            {isEffectiveCollapsed && (
               <div className="w-full flex items-center justify-center">
                 <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center shadow-lg ring-1 ring-white/20">
                   <span className="text-white font-bold text-base">AP</span>
@@ -909,20 +926,23 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
               </div>
             )}
             <div className="flex items-center gap-2">
-              <button
-                onClick={toggleCollapse}
-                className="text-neutral-300 hover:text-white transition-all duration-200 hover:scale-110 p-1.5 rounded-lg hover:bg-white/5"
-                title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {isCollapsed ? (
-                  <ChevronRight className="w-4 h-4" />
-                ) : (
-                  <ChevronLeft className="w-4 h-4" />
-                )}
-              </button>
+              {!isMobile && (
+                <button
+                  onClick={toggleCollapse}
+                  className="text-neutral-300 hover:text-white transition-all duration-200 hover:scale-110 p-1.5 rounded-lg hover:bg-white/5"
+                  title={isEffectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {isEffectiveCollapsed ? (
+                    <ChevronRight className="w-4 h-4" />
+                  ) : (
+                    <ChevronLeft className="w-4 h-4" />
+                  )}
+                </button>
+              )}
               <button
                 onClick={onClose}
-                className="lg:hidden text-neutral-300 hover:text-white transition-all duration-200 hover:scale-110"
+                className="lg:hidden p-1.5 text-neutral-300 hover:text-white transition-all duration-200 hover:scale-110 rounded-lg hover:bg-white/10"
+                aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -930,7 +950,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
           </div>
 
           {/* Search Bar */}
-          {!isCollapsed && (
+          {!isEffectiveCollapsed && (
             <div className="relative animate-[slideIn_0.4s_ease-out_0.2s_both]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/70 w-4 h-4 z-10 transition-colors duration-200" />
               <Input
@@ -981,7 +1001,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
                     )}
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
-                    {!isCollapsed && (
+                    {!isEffectiveCollapsed && (
                       <div className="px-3 py-2 mb-2">
                         <span className="text-white/60 font-bold text-xs uppercase tracking-wider text-left">
                           {item.label}
