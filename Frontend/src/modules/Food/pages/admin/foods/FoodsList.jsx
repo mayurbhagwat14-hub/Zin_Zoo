@@ -622,9 +622,9 @@ export default function FoodsList() {
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
+    <div className="p-2.5 sm:p-4 lg:p-6 bg-slate-50 min-h-screen">
       {/* Header Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-4 sm:mb-6">
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate('/admin/food')}
@@ -1016,35 +1016,35 @@ export default function FoodsList() {
       </div>
 
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="max-w-xl p-0 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
-          <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800">
-            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-white">Food Details</DialogTitle>
+        <DialogContent className="w-[95vw] sm:max-w-xl p-0 overflow-hidden dark:bg-slate-900 dark:border-slate-800 rounded-2xl">
+          <DialogHeader className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800">
+            <DialogTitle className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Food Details</DialogTitle>
           </DialogHeader>
           {selectedFood && (
-            <div className="p-6 space-y-5">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center gap-4">
                 <img
                   src={withImageVersion(selectedFood.image)}
                   alt={selectedFood.name}
-                  className="w-20 h-20 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-200 dark:border-slate-800 shrink-0"
                   onError={(e) => { e.target.src = typeof ADMIN_FALLBACK_IMAGE !== "undefined" ? ADMIN_FALLBACK_IMAGE : (typeof FOOD_FALLBACK_IMAGE !== "undefined" ? FOOD_FALLBACK_IMAGE : typeof FALLBACK_IMAGE !== "undefined" ? FALLBACK_IMAGE : "") }}
                 />
-                <div>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white">{selectedFood.name}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">ID #{formatFoodId(selectedFood.id)}</p>
+                <div className="min-w-0">
+                  <p className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white truncate">{selectedFood.name}</p>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">ID #{formatFoodId(selectedFood.id)}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 border border-slate-200 rounded-lg p-4 dark:bg-slate-800 dark:border-slate-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 sm:p-4 dark:bg-slate-800 dark:border-slate-700">
                 <p><span className="font-semibold text-slate-700 dark:text-slate-300">Price:</span> <span className="text-slate-900 dark:text-white">{selectedFood.variants?.length ? `Starting from \u20B9${selectedFood.price}` : `\u20B9${selectedFood.price}`}</span></p>
                 <p><span className="font-semibold text-slate-700 dark:text-slate-300">Category:</span> <span className="text-slate-900 dark:text-white">{selectedFood.categoryName || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700 dark:text-slate-300">Food Type:</span> <span className="text-slate-900 dark:text-white">{selectedFood.foodType || "-"}</span></p>
               </div>
               {selectedFood.variants?.length ? (
-                <div className="rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-800 dark:border-slate-700">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white mb-2">Variants</p>
+                <div className="rounded-lg border border-slate-200 bg-white p-3 sm:p-4 dark:bg-slate-800 dark:border-slate-700">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-white mb-2">Variants</p>
                   <div className="space-y-2">
                     {selectedFood.variants.map((variant) => (
-                      <div key={variant.id || variant._id} className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-300">
+                      <div key={variant.id || variant._id} className="flex items-center justify-between text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                         <span>{variant.name}</span>
                         <span className="font-semibold text-slate-900 dark:text-white">{"\u20B9"}{variant.price}</span>
                       </div>
@@ -1053,7 +1053,7 @@ export default function FoodsList() {
                 </div>
               ) : null}
               {selectedFood.description && (
-                <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                   <span className="font-semibold text-slate-800 dark:text-white">Description:</span> {selectedFood.description}
                 </p>
               )}
@@ -1077,13 +1077,13 @@ export default function FoodsList() {
           }
         }}
       >
-        <DialogContent className="max-w-2xl p-0 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
-          <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800">
-            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-white">
+        <DialogContent className="w-[95vw] sm:max-w-2xl p-0 overflow-hidden dark:bg-slate-900 dark:border-slate-800 rounded-2xl max-h-[92vh] flex flex-col">
+          <DialogHeader className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 bg-slate-50 dark:bg-slate-900/50 dark:border-slate-800 shrink-0">
+            <DialogTitle className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
               {foodFormMode === "edit" ? "Edit Food" : "Add Food"}
             </DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Restaurant *</label>

@@ -56,7 +56,7 @@ export default function AdminLayout() {
     setIsSidebarCollapsed(collapsed)
   }
 
-  // Ensure each admin route opens from top of the scrollable content area.
+  // Ensure each admin route opens from top of the scrollable content area & closes mobile drawer
   useEffect(() => {
     if (mainContentRef.current) {
       mainContentRef.current.scrollTop = 0;
@@ -64,6 +64,7 @@ export default function AdminLayout() {
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
     }
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   return (
@@ -74,7 +75,7 @@ export default function AdminLayout() {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-900/50 dark:bg-gray-900/70 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
