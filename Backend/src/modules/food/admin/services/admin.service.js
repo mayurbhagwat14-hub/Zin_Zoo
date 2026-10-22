@@ -1,4 +1,4 @@
-﻿import mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import { ValidationError } from '../../../../core/auth/errors.js';
 import { FoodRestaurant } from '../../restaurant/models/restaurant.model.js';
 const FoodRestaurantOutletTimings = mongoose.models.FoodRestaurantOutletTimings || mongoose.model('FoodRestaurantOutletTimings', new mongoose.Schema({}, { strict: false, collection: 'food_restaurant_outlet_timings' }));
@@ -28,6 +28,7 @@ import { FoodReferralLog } from '../models/referralLog.model.js';
 import { FoodSafetyEmergencyReport } from '../models/safetyEmergencyReport.model.js';
 const FoodAddon = mongoose.models.FoodAddon || mongoose.model('FoodAddon', new mongoose.Schema({}, { strict: false, collection: 'food_addons' }));
 import { FoodSupportTicket } from '../../user/models/supportTicket.model.js';
+import { FoodUserWallet } from '../../user/models/userWallet.model.js';
 import { FoodOrder } from '../../orders/models/order.model.js';
 import { FoodTransaction } from '../../orders/models/foodTransaction.model.js';
 const FoodRestaurantWithdrawal = mongoose.models.FoodRestaurantWithdrawal || mongoose.model('FoodRestaurantWithdrawal', new mongoose.Schema({}, { strict: false, collection: 'food_restaurant_withdrawals' }));
@@ -1383,23 +1384,30 @@ export async function getCustomers(query = {}) {
     };
 
     const userIds = docs.map((u) => u._id).filter(Boolean);
-    const orderStats = userIds.length > 0
-        ? await FoodOrder.aggregate([
-            {
-                $match: {
-                    userId: { $in: userIds },
-                    orderStatus: 'delivered'
+    const [orderStats, wallets] = await Promise.all([
+        userIds.length > 0
+            ? FoodOrder.aggregate([
+                {
+                    $match: {
+                        userId: { $in: userIds },
+                        orderStatus: { $nin: ['cancelled', 'failed'] }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$userId',
+                        totalOrder: { $sum: 1 },
+                        totalOrderAmount: { $sum: { $ifNull: ['$pricing.total', { $ifNull: ['$totalAmount', 0] }] } }
+                    }
                 }
-            },
-            {
-                $group: {
-                    _id: '$userId',
-                    totalOrder: { $sum: 1 },
-                    totalOrderAmount: { $sum: { $ifNull: ['$pricing.total', 0] } }
-                }
-            }
-        ])
-        : [];
+            ])
+            : [],
+        userIds.length > 0
+            ? FoodUserWallet.find({ userId: { $in: userIds } })
+                .select('userId balance referralEarnings coinBalance')
+                .lean()
+            : []
+    ]);
 
     const orderStatsMap = new Map(
         orderStats.map((x) => [
@@ -1411,23 +1419,39 @@ export async function getCustomers(query = {}) {
         ])
     );
 
+    const walletMap = new Map(
+        wallets.map((w) => [
+            String(w.userId),
+            {
+                walletBalance: Number(w.balance || 0),
+                referralEarnings: Number(w.referralEarnings || 0),
+                coinBalance: Number(w.coinBalance || 0)
+            }
+        ])
+    );
+
     let customers = docs.map((u) => {
         const stats = orderStatsMap.get(String(u._id)) || { totalOrder: 0, totalOrderAmount: 0 };
+        const w = walletMap.get(String(u._id)) || { walletBalance: 0, referralEarnings: 0, coinBalance: 0 };
         return ({
-        id: u._id,
-        _id: u._id,
-        name: u.name || 'Unnamed',
-        email: u.email || '',
-        phone: u.phone || '',
-        profileImage: sanitizeUrl(u.profileImage || ''),
-        countryCode: u.countryCode || '+91',
-        status: u.isActive !== false,
-        isActive: u.isActive !== false,
-        isVerified: u.isVerified === true,
-        totalOrder: stats.totalOrder,
-        totalOrderAmount: stats.totalOrderAmount,
-        joiningDate: u.createdAt,
-        createdAt: u.createdAt
+            id: u._id,
+            _id: u._id,
+            name: u.name || 'Unnamed',
+            email: u.email || '',
+            phone: u.phone || '',
+            profileImage: sanitizeUrl(u.profileImage || ''),
+            countryCode: u.countryCode || '+91',
+            status: u.isActive !== false,
+            isActive: u.isActive !== false,
+            isVerified: u.isVerified === true,
+            totalOrder: stats.totalOrder,
+            totalOrders: stats.totalOrder,
+            totalOrderAmount: stats.totalOrderAmount,
+            walletBalance: w.walletBalance,
+            referralEarnings: w.referralEarnings,
+            coinBalance: w.coinBalance,
+            joiningDate: u.createdAt,
+            createdAt: u.createdAt
         });
     });
 
@@ -1444,27 +1468,80 @@ export async function getCustomerById(id) {
     const u = await FoodUser.findById(id).select('-__v').lean();
     if (!u) return null;
     const customerObjectId = new mongoose.Types.ObjectId(id);
+
+    // Fetch user wallet
+    const wallet = await FoodUserWallet.findOne({ userId: customerObjectId }).lean();
+
+    // Fetch order stats (count all orders that are not cancelled or failed)
     const orderStats = await FoodOrder.aggregate([
         {
             $match: {
                 userId: customerObjectId,
-                orderStatus: 'delivered'
+                orderStatus: { $nin: ['cancelled', 'failed'] }
             }
         },
         {
             $group: {
                 _id: '$userId',
                 totalOrders: { $sum: 1 },
-                totalOrderAmount: { $sum: { $ifNull: ['$pricing.total', 0] } }
+                totalOrderAmount: { $sum: { $ifNull: ['$pricing.total', { $ifNull: ['$totalAmount', 0] }] } }
             }
         }
     ]);
     const stats = orderStats?.[0] || {};
+
+    // Fetch recent orders
+    const recentOrders = await FoodOrder.find({ userId: customerObjectId })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('orderId restaurantName restaurant pricing totalAmount orderStatus status paymentMethod paymentStatus createdAt items')
+        .lean();
+
+    const formattedOrders = recentOrders.map(o => ({
+        orderId: o.orderId || String(o._id),
+        restaurantName: o.restaurantName || o.restaurant?.name || 'Restaurant',
+        total: Number(o.pricing?.total || o.totalAmount || 0),
+        status: o.orderStatus || o.status || 'placed',
+        paymentMethod: o.paymentMethod || 'online',
+        paymentStatus: o.paymentStatus || 'completed',
+        createdAt: o.createdAt
+    }));
+
     const sanitizeUrl = (s) => {
         if (!s) return '';
         const str = String(s).trim();
         return str.replace(/^`+|`+$/g, '').trim();
     };
+
+    // Fetch referred users who joined with this user's referral code
+    const referralLogs = await FoodReferralLog.find({ referrerId: customerObjectId })
+        .sort({ createdAt: -1 })
+        .lean();
+
+    const refereeIds = referralLogs.map(l => l.refereeId).filter(Boolean);
+    const refereeUsers = refereeIds.length > 0
+        ? await FoodUser.find({ _id: { $in: refereeIds } })
+            .select('name phone email createdAt isActive profileImage')
+            .lean()
+        : [];
+
+    const refereeUserMap = new Map(refereeUsers.map(u => [String(u._id), u]));
+
+    const referredUsers = referralLogs.map(log => {
+        const referee = refereeUserMap.get(String(log.refereeId)) || {};
+        return {
+            id: log.refereeId,
+            name: referee.name || 'Unnamed User',
+            phone: referee.phone || '',
+            email: referee.email || '',
+            profileImage: sanitizeUrl(referee.profileImage || ''),
+            isActive: referee.isActive !== false,
+            rewardAmount: Number(log.rewardAmount || 0),
+            status: log.status || 'credited',
+            createdAt: log.createdAt
+        };
+    });
+
     return {
         id: u._id,
         _id: u._id,
@@ -1476,6 +1553,18 @@ export async function getCustomerById(id) {
         status: u.isActive !== false,
         isActive: u.isActive !== false,
         isVerified: u.isVerified === true,
+        walletBalance: Number(wallet?.balance || 0),
+        referralEarnings: Number(wallet?.referralEarnings || 0),
+        coinBalance: Number(wallet?.coinBalance || 0),
+        walletTransactions: Array.isArray(wallet?.transactions) ? wallet.transactions.slice(0, 20) : [],
+        orders: formattedOrders,
+        totalReferrals: referredUsers.length || Number(u.referralCount || 0),
+        referredUsers: referredUsers,
+        addresses: u.addresses || [],
+        gender: u.gender || '',
+        dateOfBirth: u.dateOfBirth || null,
+        referralCount: Number(u.referralCount || 0),
+        referralCode: u.referralCode || '',
         totalOrders: Number(stats.totalOrders || 0),
         totalOrder: Number(stats.totalOrders || 0),
         totalOrderAmount: Number(stats.totalOrderAmount || 0),

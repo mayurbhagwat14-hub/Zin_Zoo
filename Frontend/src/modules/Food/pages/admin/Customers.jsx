@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
-import { Search, Download, ChevronDown, Calendar, Eye, FileDown, FileSpreadsheet, FileText, X, Mail, Phone, MapPin, Package, IndianRupee, Calendar as CalendarIcon, User, CheckCircle, XCircle, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Download, ChevronDown, Calendar, Eye, FileDown, FileSpreadsheet, FileText, X, Mail, Phone, MapPin, Package, IndianRupee, Calendar as CalendarIcon, User, CheckCircle, XCircle, ArrowLeft, ChevronLeft, ChevronRight, Wallet, ArrowUpRight, ArrowDownLeft, Share2, Users } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@food/components/ui/dropdown-menu"
 import { exportCustomersToCSV, exportCustomersToExcel, exportCustomersToPDF } from "@food/components/admin/customers/customersExportUtils"
 import { adminAPI } from "@food/api"
@@ -469,6 +469,7 @@ export default function Customers() {
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Contact Information</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Total Order</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Total Order Amount</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Wallet Balance</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Joining Date</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Active/Inactive</th>
                   <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">Actions</th>
@@ -477,13 +478,13 @@ export default function Customers() {
               <tbody className="bg-white divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center">
+                    <td colSpan={9} className="px-6 py-8 text-center">
                       <div className="text-sm text-slate-500">Loading customers...</div>
                     </td>
                   </tr>
                 ) : filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center">
+                    <td colSpan={9} className="px-6 py-8 text-center">
                       <div className="text-sm text-slate-500">No customers found</div>
                     </td>
                   </tr>
@@ -527,10 +528,13 @@ export default function Customers() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-slate-700">{customer.totalOrder || 0}</span>
+                        <span className="text-sm text-slate-700">{customer.totalOrders ?? customer.totalOrder ?? 0}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-900">Rs. {(customer.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-semibold text-amber-600">Rs. {(customer.walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">{formatDateTime(customer.joiningDate)}</span>
@@ -664,31 +668,196 @@ export default function Customers() {
               </div>
 
               {/* Statistics Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-3 border border-amber-200/80 dark:border-amber-900/40">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Wallet className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Wallet Balance</span>
+                  </div>
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                    Rs. {(userDetails.walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  {Number(userDetails.referralEarnings) > 0 && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+                      Referral: Rs. {Number(userDetails.referralEarnings).toLocaleString('en-IN')}
+                    </p>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-3 border border-blue-200/80 dark:border-blue-900/40">
+                  <div className="flex items-center gap-1.5 mb-1">
                     <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Total Orders</span>
                   </div>
-                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{userDetails.totalOrders || 0}</p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <IndianRupee className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Total Spent</span>
-                  </div>
-                  <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                    Rs. {(userDetails.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{userDetails.totalOrders ?? userDetails.totalOrder ?? 0}</p>
+                  <p className="text-[11px] text-blue-700 dark:text-blue-400 mt-0.5">
+                    Orders placed
                   </p>
                 </div>
-                <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Member Since</span>
+
+                <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-3 border border-emerald-200/80 dark:border-emerald-900/40">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <IndianRupee className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Total Spent</span>
                   </div>
-                  <p className="text-base font-bold text-purple-600 dark:text-purple-400">{formatDateTime(userDetails.joiningDate)}</p>
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    Rs. {(userDetails.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    Total order value
+                  </p>
+                </div>
+
+                <div className="bg-purple-50 dark:bg-purple-900/10 rounded-xl p-3 border border-purple-200/80 dark:border-purple-900/40">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Share2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Total Referrals</span>
+                  </div>
+                  <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                    {userDetails.totalReferrals || userDetails.referredUsers?.length || 0} Users
+                  </p>
+                  <p className="text-[11px] text-purple-700 dark:text-purple-400 mt-0.5">
+                    Earned: Rs. {(userDetails.referralEarnings || 0).toLocaleString('en-IN')}
+                  </p>
                 </div>
               </div>
+
+              {/* Recent Orders Section */}
+              {userDetails.orders && userDetails.orders.length > 0 && (
+                <div>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-blue-600" />
+                      Recent Orders ({userDetails.orders.length})
+                    </span>
+                  </h4>
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {userDetails.orders.map((order, index) => {
+                      const getStatusBadge = (status) => {
+                        const s = String(status || '').toLowerCase();
+                        if (s === 'delivered') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200';
+                        if (s === 'cancelled' || s === 'failed') return 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-red-200';
+                        return 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200';
+                      };
+
+                      return (
+                        <div key={index} className="bg-slate-50 dark:bg-zinc-800/40 rounded-xl p-3 border border-slate-200/80 dark:border-zinc-700 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-zinc-800/80 transition-colors">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">#{order.orderId}</p>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${getStatusBadge(order.status)}`}>
+                                {(order.status || 'placed').replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5">
+                              {order.restaurantName} • {formatDateTime(order.createdAt)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">Rs. {(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-[11px] text-slate-500 capitalize">{order.paymentMethod || 'Online'}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Referred Customers Section */}
+              {userDetails.referredUsers && userDetails.referredUsers.length > 0 && (
+                <div>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Share2 className="w-4 h-4 text-purple-600" />
+                      Referred Customers ({userDetails.referredUsers.length})
+                    </span>
+                    {userDetails.referralCode && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                        Code: {userDetails.referralCode}
+                      </span>
+                    )}
+                  </h4>
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {userDetails.referredUsers.map((refUser, index) => (
+                      <div key={index} className="bg-slate-50 dark:bg-zinc-800/40 rounded-xl p-3 border border-slate-200/80 dark:border-zinc-700 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-zinc-800/80 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold text-xs shrink-0">
+                            {getInitials(refUser.name)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">{refUser.name}</p>
+                              {refUser.isActive ? (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-200 text-slate-600">
+                                  Inactive
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 flex items-center gap-2">
+                              {refUser.phone && <span>{refUser.phone}</span>}
+                              <span>•</span>
+                              <span>Joined: {formatDateTime(refUser.createdAt)}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            +Rs. {(refUser.rewardAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 capitalize">
+                            {refUser.status || 'credited'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Wallet Transactions Section */}
+              {userDetails.walletTransactions && userDetails.walletTransactions.length > 0 && (
+                <div>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-amber-600" />
+                    Wallet Transactions ({userDetails.walletTransactions.length})
+                  </h4>
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {userDetails.walletTransactions.map((tx, index) => {
+                      const isAddition = tx.type === 'addition';
+                      return (
+                        <div key={index} className="bg-slate-50 dark:bg-zinc-800/40 rounded-xl p-3 border border-slate-200/80 dark:border-zinc-700 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${isAddition ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300'}`}>
+                              {isAddition ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                {tx.description || (isAddition ? 'Wallet Credit' : 'Wallet Debit')}
+                              </p>
+                              <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                                {formatDateTime(tx.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-sm font-bold ${isAddition ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {isAddition ? '+' : '-'}Rs. {(tx.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-slate-200/60 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300">
+                              {tx.status || 'Completed'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Addresses Section */}
               {userDetails.addresses && userDetails.addresses.length > 0 && (
@@ -715,30 +884,6 @@ export default function Customers() {
                           {address.state && `, ${address.state}`}
                           {address.zipCode && ` - ${address.zipCode}`}
                         </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recent Orders Section */}
-              {userDetails.orders && userDetails.orders.length > 0 && (
-                <div>
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    Recent Orders
-                  </h4>
-                  <div className="space-y-2">
-                    {userDetails.orders.slice(0, 5).map((order, index) => (
-                      <div key={index} className="bg-slate-50 dark:bg-zinc-800/40 rounded-lg p-3 border border-slate-200 dark:border-zinc-700 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{order.orderId}</p>
-                          <p className="text-xs text-slate-600 dark:text-zinc-400">{order.restaurantName}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">Rs. {(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <p className="text-xs text-slate-600 dark:text-zinc-400 capitalize">{order.status}</p>
-                        </div>
                       </div>
                     ))}
                   </div>
