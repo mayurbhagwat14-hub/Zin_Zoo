@@ -122,7 +122,7 @@ export default function Categories() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-10">
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-3 sm:gap-x-4 gap-y-6 sm:gap-y-7">
             {filteredCategories.map((category, index) => {
               return (
                 <motion.div
@@ -133,17 +133,17 @@ export default function Categories() {
                 >
                   <Link
                     to={`/food/user/category/${category.slug}`}
-                    className="flex flex-col items-center gap-2 group"
+                    className="flex flex-col items-center gap-1 group"
                   >
-                    <div className="relative w-full aspect-square flex items-center justify-center group-active:scale-95 transition-all duration-300 bg-transparent">
+                    <div className="relative w-full h-[62px] xs:h-[70px] sm:h-[78px] flex items-end justify-center group-active:scale-95 transition-all duration-300 bg-transparent">
                       <img
                         src={category.image}
                         alt={category.name}
                         loading="lazy"
-                        className="w-full h-full object-contain scale-110 sm:scale-120 group-hover:scale-125 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none"
+                        className="w-full h-full object-contain object-bottom scale-115 sm:scale-120 group-hover:scale-125 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none drop-shadow-sm"
                       />
                     </div>
-                    <span className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 text-center leading-tight">
+                    <span className="text-xs sm:text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 text-center leading-tight line-clamp-2 tracking-tight capitalize min-h-[26px] xs:min-h-[28px] flex items-start justify-center">
                       {category.name}
                     </span>
                   </Link>
