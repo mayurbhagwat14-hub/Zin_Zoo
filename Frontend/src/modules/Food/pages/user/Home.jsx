@@ -1156,7 +1156,7 @@ export default function Home() {
           id: c._id || c.id,
           name: c.name,
           slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
-          image: c.image || "https://via.placeholder.com/150"
+          image: normalizeImageUrl(c.image || c.imageUrl) || c.image || ""
         })));
       })
       .catch((err) => {
@@ -2827,39 +2827,41 @@ export default function Home() {
                     </Link>
                   </div>
                   {/* Categories Horizontal Slider */}
-                  <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide -mx-4 px-4 mask-edge-fade items-start">
-                    {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => (
-                      <div
-                        key={category.id || index}
-                        onClick={() => {
-                          const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
-                          navigate(`/food/user/category/${slug}`);
-                        }}
-                        className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[76px] xs:w-[84px] sm:w-[96px] md:w-[108px] cursor-pointer"
-                      >
-                        <div className="relative w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300">
-                          <OptimizedImage
-                            src={category.image}
-                            alt={category.name}
-                            objectFit="contain"
-                            className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
-                          />
+                  <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide -mx-4 px-4 mask-edge-fade items-start">
+                    {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => {
+                      const categoryImage = normalizeImageUrl(category.image || category.imageUrl) || category.image;
+                      return (
+                        <div
+                          key={category.id || index}
+                          onClick={() => {
+                            const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
+                            navigate(`/food/user/category/${slug}`);
+                          }}
+                          className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[86px] xs:w-[96px] sm:w-[110px] md:w-[122px] cursor-pointer"
+                        >
+                          <div className="relative w-20 h-20 xs:w-22 xs:h-22 sm:w-26 sm:h-26 md:w-28 md:h-28 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300 bg-transparent">
+                            <img
+                              src={categoryImage}
+                              alt={category.name}
+                              loading="lazy"
+                              className="w-full h-full object-contain scale-110 sm:scale-120 group-hover:scale-125 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none"
+                            />
+                          </div>
+                          <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight line-clamp-2 w-full px-0.5">
+                            {category.name}
+                          </span>
                         </div>
-                        <span className="text-[11px] xs:text-xs sm:text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight line-clamp-2 w-full px-0.5">
-                          {category.name}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {displayCategories.length > 8 && (
                       <div
                         onClick={() => navigate("/food/user/categories")}
-                        className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[76px] xs:w-[84px] sm:w-[96px] md:w-[108px] cursor-pointer"
+                        className="flex-shrink-0 flex flex-col items-center justify-center gap-2 group w-[76px] xs:w-[84px] sm:w-[96px] cursor-pointer pt-4"
                       >
-                        <div className="relative w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 shrink-0 aspect-square rounded-2xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-900/40 flex flex-col items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 group-active:scale-95 transition-all duration-300">
-                          <Plus className="w-6 h-6 text-[#F84E04] group-hover:rotate-90 transition-transform duration-300" />
-                          <span className="text-[10px] font-bold text-[#F84E04] mt-0.5">More</span>
+                        <div className="w-12 h-12 xs:w-14 xs:h-14 rounded-full bg-gray-100 dark:bg-zinc-800/80 flex items-center justify-center group-hover:bg-[#F84E04] group-active:scale-90 transition-all duration-300">
+                          <ArrowRight className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors" />
                         </div>
-                        <span className="text-[11px] xs:text-xs sm:text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#F84E04] text-center leading-tight">
                           View All
                         </span>
                       </div>
@@ -2919,38 +2921,40 @@ export default function Home() {
 
                       {/* Categories Slider (Sticky Mode) */}
                       <div className="flex overflow-x-auto gap-3 py-1.5 px-4 scrollbar-hide mask-edge-fade border-b border-gray-100 dark:border-gray-800 items-start">
-                        {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => (
-                          <div
-                            key={`sticky-${category.id || index}`}
-                            onClick={() => {
-                              const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
-                              navigate(`/food/user/category/${slug}`);
-                            }}
-                            className="flex-shrink-0 flex flex-col items-center gap-1 group w-[70px] xs:w-[78px] sm:w-[86px] cursor-pointer"
-                          >
-                            <div className="relative w-14 h-14 xs:w-16 xs:h-16 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300">
-                              <OptimizedImage
-                                src={category.image}
-                                alt={category.name}
-                                objectFit="contain"
-                                className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
-                              />
+                        {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => {
+                          const categoryImage = normalizeImageUrl(category.image || category.imageUrl) || category.image;
+                          return (
+                            <div
+                              key={`sticky-${category.id || index}`}
+                              onClick={() => {
+                                const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
+                                navigate(`/food/user/category/${slug}`);
+                              }}
+                              className="flex-shrink-0 flex flex-col items-center gap-1 group w-[72px] xs:w-[80px] sm:w-[88px] cursor-pointer"
+                            >
+                              <div className="relative w-16 h-16 xs:w-18 xs:h-18 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300 bg-transparent">
+                                <img
+                                  src={categoryImage}
+                                  alt={category.name}
+                                  loading="lazy"
+                                  className="w-full h-full object-contain scale-110 sm:scale-120 group-hover:scale-125 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none"
+                                />
+                              </div>
+                              <span className="text-[10px] xs:text-[11px] font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight line-clamp-1 w-full px-0.5">
+                                {category.name}
+                              </span>
                             </div>
-                            <span className="text-[10px] xs:text-[11px] font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight line-clamp-1 w-full px-0.5">
-                              {category.name}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {displayCategories.length > 8 && (
                           <div
                             onClick={() => navigate("/food/user/categories")}
-                            className="flex-shrink-0 flex flex-col items-center gap-1 group w-[70px] xs:w-[78px] sm:w-[86px] cursor-pointer"
+                            className="flex-shrink-0 flex flex-col items-center justify-center gap-1 group w-[64px] xs:w-[72px] cursor-pointer pt-2"
                           >
-                            <div className="relative w-14 h-14 xs:w-16 xs:h-16 shrink-0 aspect-square rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-900/40 flex flex-col items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 group-active:scale-95 transition-all duration-300">
-                              <Plus className="w-5 h-5 text-[#F84E04] group-hover:rotate-90 transition-transform duration-300" />
-                              <span className="text-[9px] font-bold text-[#F84E04] mt-0.5">More</span>
+                            <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-[#F84E04] group-active:scale-90 transition-all duration-300">
+                              <ArrowRight className="w-4 h-4 text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors" />
                             </div>
-                            <span className="text-[10px] xs:text-[11px] font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight">
+                            <span className="text-[10px] font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#F84E04] text-center leading-tight">
                               View All
                             </span>
                           </div>

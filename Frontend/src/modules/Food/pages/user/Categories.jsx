@@ -135,13 +135,12 @@ export default function Categories() {
                     to={`/food/user/category/${category.slug}`}
                     className="flex flex-col items-center gap-2 group"
                   >
-                    <div className="relative w-full aspect-square flex items-center justify-center group-active:scale-95 transition-all duration-300">
-                      <OptimizedImage
+                    <div className="relative w-full aspect-square flex items-center justify-center group-active:scale-95 transition-all duration-300 bg-transparent">
+                      <img
                         src={category.image}
                         alt={category.name}
-                        objectFit="contain"
-                        className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
-                        sizes="(max-width: 640px) 25vw, 15vw"
+                        loading="lazy"
+                        className="w-full h-full object-contain scale-110 sm:scale-120 group-hover:scale-125 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none"
                       />
                     </div>
                     <span className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 text-center leading-tight">
