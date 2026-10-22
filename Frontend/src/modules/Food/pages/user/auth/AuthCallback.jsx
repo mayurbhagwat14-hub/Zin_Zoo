@@ -42,6 +42,7 @@ export default function AuthCallback() {
 
         // Check for direct token from backend (Backend OAuth flow)
         const token = searchParams.get("token")
+        const refreshToken = searchParams.get("refreshToken")
         const userStr = searchParams.get("user")
 
         if (token) {
@@ -49,7 +50,7 @@ export default function AuthCallback() {
             const user = userStr ? JSON.parse(userStr) : null
 
             // Save auth data
-            setAuthData("user", token, user)
+            setAuthData("user", token, user, refreshToken)
 
             // Notify app of auth change
             window.dispatchEvent(new Event("userAuthChanged"))

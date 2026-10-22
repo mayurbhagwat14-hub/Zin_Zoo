@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { isModuleAuthenticated, getModuleToken, getModuleRefreshToken, isTokenExpired } from "@food/utils/auth";
+import { isModuleAuthenticated, getModuleToken, getModuleRefreshToken, isTokenExpired, scheduleProactiveRefresh } from "@food/utils/auth";
 import { restaurantAPI } from "@food/api";
 import axios from "axios";
 
@@ -64,6 +64,7 @@ async function silentRefresh(module) {
         if (newRefreshToken && typeof newRefreshToken === "string") {
           localStorage.setItem(`${module}_refreshToken`, newRefreshToken);
         }
+        scheduleProactiveRefresh(module);
       } catch (_) {}
       return { success: true, token: newAccessToken };
     }

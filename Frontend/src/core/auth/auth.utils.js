@@ -40,14 +40,29 @@ export function getRoleFromToken(token) {
 /**
  * Check if token is expired
  * @param {string} token - JWT token
+ * @param {number} bufferSeconds - Optional buffer to treat token as expired N seconds before actual expiry
  * @returns {boolean} - True if expired or invalid
  */
-export function isTokenExpired(token) {
+export function isTokenExpired(token, bufferSeconds = 0) {
+  if (!token || typeof token !== 'string') return true;
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return true;
   
   // exp is in seconds, Date.now() is in milliseconds
-  return decoded.exp * 1000 < Date.now();
+  return (decoded.exp - bufferSeconds) * 1000 < Date.now();
+}
+
+/**
+ * Get remaining seconds until token expiry
+ * @param {string} token - JWT token
+ * @returns {number} - Seconds remaining, 0 if expired or invalid
+ */
+export function getTokenRemainingSeconds(token) {
+  if (!token || typeof token !== 'string') return 0;
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return 0;
+  const remaining = decoded.exp - Math.floor(Date.now() / 1000);
+  return Math.max(0, remaining);
 }
 
 /**
@@ -131,7 +146,8 @@ export function getCurrentUserRole(module = null) {
 }
 
 /**
- * Check if user is authenticated for a specific module
+ * Check if user is authenticated for a specific module.
+ * More resilient: considers refresh token validity and handles clock skew.
  * @param {string} module - Module name (admin, restaurant, delivery, user)
  * @returns {boolean} - True if authenticated
  */
@@ -142,10 +158,17 @@ export function isModuleAuthenticated(module) {
   }
   
   const refreshToken = getModuleRefreshToken(module);
-  if (refreshToken && !isTokenExpired(refreshToken)) {
-    return true;
+  if (refreshToken) {
+    if (!isTokenExpired(refreshToken)) {
+      return true;
+    }
+    // Clock skew protection: allow 5 minutes of tolerance
+    const decoded = decodeToken(refreshToken);
+    if (decoded && decoded.exp) {
+      const isWithinClockSkew = (decoded.exp + 300) * 1000 > Date.now();
+      if (isWithinClockSkew) return true;
+    }
   }
-  
   return false;
 }
 
@@ -291,6 +314,11 @@ export function setAuthData(module, token, user, refreshToken = null) {
     }
 
     console.log(`[setAuthData] Successfully stored auth data for ${module}`);
+    try {
+      import('../../modules/Food/utils/auth.js').then(({ scheduleProactiveRefresh }) => {
+        scheduleProactiveRefresh(module);
+      });
+    } catch (_) {}
   } catch (error) {
     // If quota exceeded, try to clear some space
     if (error.name === 'QuotaExceededError' || error.code === 22) {

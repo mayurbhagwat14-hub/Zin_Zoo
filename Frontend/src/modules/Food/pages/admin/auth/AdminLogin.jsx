@@ -1,7 +1,7 @@
-﻿import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { adminAPI } from "@food/api"
-import { setAuthData } from "@food/utils/auth"
+import { setAuthData, scheduleProactiveRefresh } from "@food/utils/auth"
 import { loadBusinessSettings } from "@food/utils/businessSettings"
 import { Button } from "@food/components/ui/button"
 import {
@@ -111,6 +111,7 @@ export default function AdminLogin() {
         throw new Error("Invalid response from server: missing refresh token")
       }
       setAuthData("admin", accessToken, adminUser, refreshToken)
+      scheduleProactiveRefresh("admin")
       navigate("/admin/food", { replace: true })
     } catch (err) {
       const message =

@@ -2,13 +2,17 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
 import App from './app/App.jsx'
-import { isModuleAuthenticated } from './modules/Food/utils/auth.js'
+import { isModuleAuthenticated, initializeProactiveRefresh } from './modules/Food/utils/auth.js'
 import './shared/styles/global.css'
 import { setupSmoothScroll } from './shared/utils/smoothScroll.js'
 
 const NATIVE_LAST_ROUTE_KEY = 'native_last_route'
 
 // ─── Quick-spicy Food Module Initialization ───────────────────────────────────
+
+// Initialize proactive background token refresh (app-like session persistence)
+// This refreshes tokens BEFORE they expire so users stay logged in for weeks
+initializeProactiveRefresh()
 
 // Load food module business settings (favicon, title) — non-critical
 import('./modules/Food/utils/businessSettings.js')

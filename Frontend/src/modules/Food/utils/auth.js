@@ -40,14 +40,29 @@ export function getRoleFromToken(token) {
 /**
  * Check if token is expired
  * @param {string} token - JWT token
+ * @param {number} bufferSeconds - Optional buffer to treat token as expired N seconds before actual expiry (for proactive refresh)
  * @returns {boolean} - True if expired or invalid
  */
-export function isTokenExpired(token) {
+export function isTokenExpired(token, bufferSeconds = 0) {
+  if (!token || typeof token !== 'string') return true;
   const decoded = decodeToken(token);
   if (!decoded || !decoded.exp) return true;
   
   // exp is in seconds, Date.now() is in milliseconds
-  return decoded.exp * 1000 < Date.now();
+  return (decoded.exp - bufferSeconds) * 1000 < Date.now();
+}
+
+/**
+ * Get remaining seconds until token expiry
+ * @param {string} token - JWT token
+ * @returns {number} - Seconds remaining, 0 if expired or invalid
+ */
+export function getTokenRemainingSeconds(token) {
+  if (!token || typeof token !== 'string') return 0;
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return 0;
+  const remaining = decoded.exp - Math.floor(Date.now() / 1000);
+  return Math.max(0, remaining);
 }
 
 /**
@@ -132,7 +147,13 @@ export function getCurrentUser(module) {
 }
 
 /**
- * Check if user is authenticated for a specific module
+ * Check if user is authenticated for a specific module.
+ * Considers the user authenticated if:
+ * 1. A valid (non-expired) access token exists, OR
+ * 2. A valid (non-expired) refresh token exists (silent refresh will be attempted)
+ * 3. The access token string exists and is a JWT-looking string (3 dot-separated parts)
+ *    even if we can't decode the expiry — gives benefit of the doubt and lets the
+ *    server-side validation decide.
  * @param {string} module - Module name (admin, restaurant, delivery, user)
  * @returns {boolean} - True if authenticated
  */
@@ -143,8 +164,20 @@ export function isModuleAuthenticated(module) {
   }
   // If access token is expired or missing, check if a valid refresh token exists
   const refreshToken = getModuleRefreshToken(module);
-  if (refreshToken && !isTokenExpired(refreshToken)) {
-    return true;
+  if (refreshToken) {
+    // If refresh token string looks like a JWT, consider authenticated
+    // even if we can't decode it — the server will validate
+    if (!isTokenExpired(refreshToken)) {
+      return true;
+    }
+    // Even if refresh token appears expired by client clock, give benefit of doubt
+    // if it's still a valid JWT structure (clock skew protection)
+    const decoded = decodeToken(refreshToken);
+    if (decoded && decoded.exp) {
+      // Allow 5 minutes of clock skew
+      const isWithinClockSkew = (decoded.exp + 300) * 1000 > Date.now();
+      if (isWithinClockSkew) return true;
+    }
   }
   return false;
 }
@@ -293,6 +326,9 @@ export function setAuthData(module, token, user, refreshToken = null) {
     }
 
     console.log(`[setAuthData] Successfully stored auth data for ${module}`);
+    try {
+      scheduleProactiveRefresh(module);
+    } catch (_) {}
   } catch (error) {
     // If quota exceeded, try to clear some space
     if (error.name === 'QuotaExceededError' || error.code === 22) {
@@ -325,4 +361,154 @@ export function setAuthData(module, token, user, refreshToken = null) {
       throw error;
     }
   }
+}
+
+// ─── Proactive Background Token Refresh ─────────────────────────────────────
+// Refreshes access tokens in the background BEFORE they expire,
+// just like mobile apps do — so the user never gets logged out unexpectedly.
+
+const _refreshTimers = {}; // module -> timeoutId
+
+/**
+ * Schedule a proactive background refresh for a module's access token.
+ * Automatically refreshes at 80% of the token's lifetime to prevent expiry.
+ * Call this after login and after each successful refresh.
+ * @param {string} module - Module name (user, admin, restaurant, delivery)
+ */
+export function scheduleProactiveRefresh(module) {
+  if (!module) return;
+
+  // Clear any existing timer for this module
+  if (_refreshTimers[module]) {
+    clearTimeout(_refreshTimers[module]);
+    delete _refreshTimers[module];
+  }
+
+  const token = getModuleToken(module);
+  if (!token) return;
+
+  const remainingSeconds = getTokenRemainingSeconds(token);
+  if (remainingSeconds <= 0) return; // Already expired, let ProtectedRoute/axios handle it
+
+  // Refresh when token is at 80% of lifetime or has <= 2 days left.
+  // Cap timer delay to max 12 hours (43,200 seconds) to avoid 32-bit setTimeout integer overflow.
+  const MAX_TIMER_SECONDS = 43200; // 12 hours
+  const shouldRefreshNow = remainingSeconds <= 172800; // <= 2 days left
+  const targetSeconds = shouldRefreshNow ? Math.max(60, Math.floor(remainingSeconds * 0.5)) : MAX_TIMER_SECONDS;
+  const refreshInSeconds = Math.min(targetSeconds, MAX_TIMER_SECONDS);
+
+  console.log(
+    `[ProactiveRefresh] ${module} token check scheduled in ${Math.round(refreshInSeconds / 60)} minutes ` +
+    `(token expires in ${Math.round(remainingSeconds / 3600)} hours)`
+  );
+
+  _refreshTimers[module] = setTimeout(async () => {
+    delete _refreshTimers[module];
+
+    // Re-check remaining seconds
+    const currentToken = getModuleToken(module);
+    const curRemaining = getTokenRemainingSeconds(currentToken);
+    // If token still has more than 2 days left, just reschedule the check
+    if (curRemaining > 172800) {
+      scheduleProactiveRefresh(module);
+      return;
+    }
+
+    const refreshToken = getModuleRefreshToken(module);
+    if (!refreshToken) return;
+
+    try {
+      const baseURL =
+        typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL
+          ? String(import.meta.env.VITE_API_BASE_URL).replace(/\/$/, '')
+          : '';
+
+      let refreshUrl = '/api/v1/food/auth/refresh-token';
+      if (baseURL) {
+        if (baseURL.endsWith('/api/v1')) {
+          refreshUrl = `${baseURL}/food/auth/refresh-token`;
+        } else if (baseURL.endsWith('/api')) {
+          refreshUrl = `${baseURL}/v1/food/auth/refresh-token`;
+        } else {
+          refreshUrl = `${baseURL}/api/v1/food/auth/refresh-token`;
+        }
+      }
+
+      const { default: axios } = await import('axios');
+      const { data } = await axios.post(refreshUrl, { refreshToken }, { timeout: 15000 });
+      const newAccessToken = data?.data?.accessToken || data?.accessToken;
+      const newRefreshToken = data?.data?.refreshToken || data?.refreshToken;
+
+      if (newAccessToken) {
+        localStorage.setItem(`${module}_accessToken`, newAccessToken);
+        if (newRefreshToken && typeof newRefreshToken === 'string') {
+          localStorage.setItem(`${module}_refreshToken`, newRefreshToken);
+        }
+        console.log(`[ProactiveRefresh] ✅ ${module} token refreshed successfully in background`);
+
+        // Dispatch event so any listeners (e.g., socket reconnect) can pick up the new token
+        try {
+          window.dispatchEvent(new CustomEvent('authRefreshed', {
+            detail: { module, token: newAccessToken }
+          }));
+        } catch (_) {}
+
+        // Schedule the next refresh for the new token
+        scheduleProactiveRefresh(module);
+      }
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status && status >= 400 && status < 500) {
+        // Refresh token is definitively invalid — don't retry
+        console.warn(`[ProactiveRefresh] ${module} refresh token rejected by server (${status}). User will need to re-login.`);
+      } else {
+        // Network error — retry in 2 minutes
+        console.warn(`[ProactiveRefresh] ${module} refresh failed (network/server error), retrying in 2 minutes`);
+        _refreshTimers[module] = setTimeout(() => scheduleProactiveRefresh(module), 120000);
+      }
+    }
+  }, refreshInSeconds * 1000);
+}
+
+/**
+ * Initialize proactive refresh for all currently authenticated modules.
+ * Call this once on app startup.
+ */
+export function initializeProactiveRefresh() {
+  const modules = ['user', 'admin', 'restaurant', 'delivery'];
+  for (const module of modules) {
+    if (isModuleAuthenticated(module)) {
+      scheduleProactiveRefresh(module);
+    }
+  }
+}
+
+// Listen for authRefreshFailed events from axios interceptor —
+// only clear auth for definitive server rejections (handled in axios.js),
+// not for network errors.
+if (typeof window !== 'undefined') {
+  window.addEventListener('authRefreshFailed', (event) => {
+    const { module } = event.detail || {};
+    if (module) {
+      console.warn(`[Auth] Refresh definitively failed for ${module}, clearing auth.`);
+      clearModuleAuth(module);
+    }
+  });
+
+  // Listen for visibility change — when user comes back to the tab,
+  // check if tokens need refreshing
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      const modules = ['user', 'admin', 'restaurant', 'delivery'];
+      for (const mod of modules) {
+        const token = getModuleToken(mod);
+        if (token && isModuleAuthenticated(mod)) {
+          // If token is expired or about to expire (within 24 hours), trigger refresh
+          if (isTokenExpired(token, 86400)) {
+            scheduleProactiveRefresh(mod);
+          }
+        }
+      }
+    }
+  });
 }

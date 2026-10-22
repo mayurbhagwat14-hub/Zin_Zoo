@@ -5,7 +5,7 @@ import AnimatedPage from "@food/components/user/AnimatedPage"
 import { Input } from "@food/components/ui/input"
 import { Button } from "@food/components/ui/button"
 import apiClient, { authAPI } from "@food/api"
-import { setAuthData as setUserAuthData } from "@food/utils/auth"
+import { setAuthData as setUserAuthData, scheduleProactiveRefresh } from "@food/utils/auth"
 import { motion, AnimatePresence } from "framer-motion"
 import loginBanner from "@food/assets/loginbanner.png"
 
@@ -209,6 +209,7 @@ export default function OTP() {
 
       sessionStorage.removeItem("userAuthData")
       setUserAuthData("user", accessToken, user, refreshToken)
+      scheduleProactiveRefresh("user")
       window.dispatchEvent(new Event("userAuthChanged"))
       setSuccess(true)
       setTimeout(() => navigate(redirectTo, { replace: true }), 600)
@@ -253,6 +254,7 @@ export default function OTP() {
 
       sessionStorage.removeItem("userAuthData")
       setUserAuthData("user", accessToken, { ...user, name: normalizedName }, refreshToken)
+      scheduleProactiveRefresh("user")
       window.dispatchEvent(new Event("userAuthChanged"))
       setSuccess(true)
       setTimeout(() => navigate(redirectTo, { replace: true }), 600)

@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, Link, useNavigate } from "react-router-dom"
 import { Phone, Lock, ArrowRight, ShieldCheck, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { authAPI } from "@food/api"
-import { setAuthData } from "@food/utils/auth"
+import { setAuthData, scheduleProactiveRefresh } from "@food/utils/auth"
 import { getCachedSettings, getModuleLogoUrl, loadBusinessSettings } from "@food/utils/businessSettings"
 
 export default function UnifiedOTPFastLogin() {
@@ -128,6 +128,7 @@ export default function UnifiedOTPFastLogin() {
       }
 
       setAuthData("user", accessToken, user, refreshToken)
+      scheduleProactiveRefresh("user")
       toast.success("Login successful!")
       navigate("/food/user", { replace: true })
     } catch (err) {

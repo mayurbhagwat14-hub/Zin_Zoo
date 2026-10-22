@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@food/components/ui/button"
 import {
@@ -195,7 +195,7 @@ export default function AdminSignup() {
       // If registration successful, store tokens and redirect
       if (data.accessToken && data.admin) {
         // Store admin token and data
-        setAuthData("admin", data.accessToken, data.admin)
+        setAuthData("admin", data.accessToken, data.admin, data.refreshToken)
 
         // Navigate to admin dashboard
         navigate("/admin", { replace: true })

@@ -375,7 +375,9 @@ apiClient.interceptors.response.use(
     const module = original.contextModule || getModuleFromUrl(original.url);
     const refreshToken = getRefreshToken(module);
     if (!refreshToken) {
-      clearModuleAuth(module);
+      if (localStorage.getItem(`${module}_accessToken`)) {
+        clearModuleAuth(module);
+      }
       return Promise.reject(err);
     }
 
@@ -421,6 +423,12 @@ apiClient.interceptors.response.use(
           window.dispatchEvent(new CustomEvent("authRefreshed", { 
             detail: { module, token: newAccessToken } 
           }));
+          // Schedule next proactive refresh for the new token
+          try {
+            import("../../modules/Food/utils/auth.js").then(({ scheduleProactiveRefresh }) => {
+              scheduleProactiveRefresh(module);
+            });
+          } catch (_) {}
         } catch (_) {}
         onRefreshed(newAccessToken, module);
         original.headers.Authorization = `Bearer ${newAccessToken}`;
