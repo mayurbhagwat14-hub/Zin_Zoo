@@ -2602,15 +2602,16 @@ export default function Home() {
                 className="flex-shrink-0 flex flex-col items-center gap-2 group transition-all duration-300 hover:-translate-y-1"
                 style={{ animation: `fade-in-up 0.5s ease-out forwards ${index * 0.05}s`, opacity: 0 }}
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 aspect-square rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 group-hover:border-[#F84E04] transition-colors">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 aspect-square flex items-center justify-center">
                   <OptimizedImage
                     src={category.image}
                     alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    objectFit="contain"
+                    className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
                     sizes="80px"
                   />
                 </div>
-                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center truncate max-w-[72px]">
+                <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 text-center truncate max-w-[76px]">
                   {category.name}
                 </span>
               </Link>
@@ -2622,10 +2623,10 @@ export default function Home() {
               className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer group"
               onClick={() => navigate("/food/user/categories")}
             >
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-orange-50 dark:bg-orange-950 flex items-center justify-center border border-orange-100 group-hover:border-[#F84E04] transition-all">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-orange-50 dark:bg-orange-950 flex flex-col items-center justify-center border border-orange-100 group-hover:border-[#F84E04] transition-all">
                 <Plus className="w-6 h-6 text-[#F84E04]" />
               </div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-350">More</span>
+              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">More</span>
             </div>
           )}
         </div>
@@ -2826,7 +2827,7 @@ export default function Home() {
                     </Link>
                   </div>
                   {/* Categories Horizontal Slider */}
-                  <div className="flex overflow-x-auto gap-2.5 pb-1.5 scrollbar-hide -mx-4 px-4 mask-edge-fade">
+                  <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide -mx-4 px-4 mask-edge-fade items-start">
                     {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => (
                       <div
                         key={category.id || index}
@@ -2834,32 +2835,17 @@ export default function Home() {
                           const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
                           navigate(`/food/user/category/${slug}`);
                         }}
-                        className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[70px] xs:w-[78px] sm:w-[94px] md:w-[104px] cursor-pointer"
+                        className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[76px] xs:w-[84px] sm:w-[96px] md:w-[108px] cursor-pointer"
                       >
-                        <div className={`relative w-16 h-16 xs:w-16 sm:w-20 sm:h-20 shrink-0 aspect-square rounded-full overflow-hidden shadow-md border-2 border-gray-150 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] group-active:scale-95 transition-all duration-300`}>
-                          {/* Shining Glint Effect */}
-                          <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-                            <motion.div
-                              animate={{
-                                x: ['-200%', '200%'],
-                              }}
-                              transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                repeatDelay: 3 + index * 0.5,
-                                ease: "easeInOut"
-                              }}
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] w-[150%] h-full"
-                            />
-                          </div>
-
+                        <div className="relative w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300">
                           <OptimizedImage
                             src={category.image}
                             alt={category.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            objectFit="contain"
+                            className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
                           />
                         </div>
-                        <span className={`text-[10px] xs:text-[11px] sm:text-xs font-bold text-gray-555 dark:text-gray-400 group-hover:text-[#F84E04] text-center leading-tight line-clamp-2 w-full px-0.5`}>
+                        <span className="text-[11px] xs:text-xs sm:text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight line-clamp-2 w-full px-0.5">
                           {category.name}
                         </span>
                       </div>
@@ -2867,13 +2853,14 @@ export default function Home() {
                     {displayCategories.length > 8 && (
                       <div
                         onClick={() => navigate("/food/user/categories")}
-                        className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[70px] xs:w-[78px] sm:w-[94px] md:w-[104px] cursor-pointer"
+                        className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[76px] xs:w-[84px] sm:w-[96px] md:w-[108px] cursor-pointer"
                       >
-                        <div className="relative w-16 h-16 xs:w-16 sm:w-20 sm:h-20 shrink-0 aspect-square rounded-full overflow-hidden shadow-md border-2 border-transparent bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
-                          <Plus className="w-6 h-6 text-[#F84E04]" />
+                        <div className="relative w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 md:w-22 md:h-22 shrink-0 aspect-square rounded-2xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-900/40 flex flex-col items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 group-active:scale-95 transition-all duration-300">
+                          <Plus className="w-6 h-6 text-[#F84E04] group-hover:rotate-90 transition-transform duration-300" />
+                          <span className="text-[10px] font-bold text-[#F84E04] mt-0.5">More</span>
                         </div>
-                        <span className="text-[10px] xs:text-[11px] sm:text-xs font-bold text-gray-555 dark:text-gray-400 group-hover:text-[#F84E04] text-center leading-tight">
-                          More
+                        <span className="text-[11px] xs:text-xs sm:text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight">
+                          View All
                         </span>
                       </div>
                     )}
@@ -2931,7 +2918,7 @@ export default function Home() {
                       </AnimatePresence>
 
                       {/* Categories Slider (Sticky Mode) */}
-                      <div className="flex overflow-x-auto gap-2.5 py-1.5 px-4 scrollbar-hide mask-edge-fade border-b border-gray-100 dark:border-gray-800">
+                      <div className="flex overflow-x-auto gap-3 py-1.5 px-4 scrollbar-hide mask-edge-fade border-b border-gray-100 dark:border-gray-800 items-start">
                         {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => (
                           <div
                             key={`sticky-${category.id || index}`}
@@ -2939,32 +2926,17 @@ export default function Home() {
                               const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
                               navigate(`/food/user/category/${slug}`);
                             }}
-                            className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[70px] xs:w-[78px] sm:w-[94px] md:w-[104px] cursor-pointer"
+                            className="flex-shrink-0 flex flex-col items-center gap-1 group w-[70px] xs:w-[78px] sm:w-[86px] cursor-pointer"
                           >
-                            <div className={`relative w-16 h-16 xs:w-16 sm:w-20 sm:h-20 shrink-0 aspect-square rounded-full overflow-hidden shadow-md border-2 border-gray-150 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] group-active:scale-95 transition-all duration-300`}>
-                              {/* Shining Glint Effect */}
-                              <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
-                                <motion.div
-                                  animate={{
-                                    x: ['-200%', '200%'],
-                                  }}
-                                  transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    repeatDelay: 3 + index * 0.5,
-                                    ease: "easeInOut"
-                                  }}
-                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg] w-[150%] h-full"
-                                />
-                              </div>
-
+                            <div className="relative w-14 h-14 xs:w-16 xs:h-16 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300">
                               <OptimizedImage
                                 src={category.image}
                                 alt={category.name}
-                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                objectFit="contain"
+                                className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
                               />
                             </div>
-                            <span className={`text-[10px] xs:text-[11px] sm:text-xs font-bold text-gray-555 dark:text-gray-400 group-hover:text-[#F84E04] text-center leading-tight line-clamp-2 w-full px-0.5`}>
+                            <span className="text-[10px] xs:text-[11px] font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight line-clamp-1 w-full px-0.5">
                               {category.name}
                             </span>
                           </div>
@@ -2972,13 +2944,14 @@ export default function Home() {
                         {displayCategories.length > 8 && (
                           <div
                             onClick={() => navigate("/food/user/categories")}
-                            className="flex-shrink-0 flex flex-col items-center gap-1.5 group w-[70px] xs:w-[78px] sm:w-[94px] md:w-[104px] cursor-pointer"
+                            className="flex-shrink-0 flex flex-col items-center gap-1 group w-[70px] xs:w-[78px] sm:w-[86px] cursor-pointer"
                           >
-                            <div className="relative w-16 h-16 xs:w-16 sm:w-20 sm:h-20 shrink-0 aspect-square rounded-full overflow-hidden shadow-md border-2 border-transparent bg-orange-50 dark:bg-orange-950/20 flex items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
-                              <Plus className="w-6 h-6 text-[#F84E04]" />
+                            <div className="relative w-14 h-14 xs:w-16 xs:h-16 shrink-0 aspect-square rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200/50 dark:border-orange-900/40 flex flex-col items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 group-active:scale-95 transition-all duration-300">
+                              <Plus className="w-5 h-5 text-[#F84E04] group-hover:rotate-90 transition-transform duration-300" />
+                              <span className="text-[9px] font-bold text-[#F84E04] mt-0.5">More</span>
                             </div>
-                            <span className="text-[10px] xs:text-[11px] sm:text-xs font-bold text-gray-555 dark:text-gray-400 group-hover:text-[#F84E04] text-center leading-tight">
-                              More
+                            <span className="text-[10px] xs:text-[11px] font-semibold text-gray-800 dark:text-gray-200 group-hover:text-[#F84E04] text-center leading-tight">
+                              View All
                             </span>
                           </div>
                         )}

@@ -115,9 +115,9 @@ export default function Categories() {
         {loading ? (
           <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-10">
             {[...Array(12)].map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-3 animate-pulse">
-                <div className="w-full aspect-square rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-50 dark:border-neutral-700" />
-                <div className="h-2 w-12 bg-neutral-100 dark:bg-neutral-800 rounded-full" />
+              <div key={i} className="flex flex-col items-center gap-2 animate-pulse">
+                <div className="w-full aspect-square rounded-2xl bg-neutral-100 dark:bg-neutral-800" />
+                <div className="h-2.5 w-14 bg-neutral-100 dark:bg-neutral-800 rounded-md" />
               </div>
             ))}
           </div>
@@ -133,18 +133,18 @@ export default function Categories() {
                 >
                   <Link
                     to={`/food/user/category/${category.slug}`}
-                    className="flex flex-col items-center gap-2.5 group"
+                    className="flex flex-col items-center gap-2 group"
                   >
-                    <div className="relative w-full aspect-square rounded-full overflow-hidden shadow-sm border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-[#1a1a1a] group-active:scale-90 transition-all duration-300">
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity z-10" />
+                    <div className="relative w-full aspect-square flex items-center justify-center group-active:scale-95 transition-all duration-300">
                       <OptimizedImage
                         src={category.image}
                         alt={category.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        objectFit="contain"
+                        className="w-full h-full object-contain drop-shadow-sm group-hover:scale-110 transition-transform duration-300"
                         sizes="(max-width: 640px) 25vw, 15vw"
                       />
                     </div>
-                    <span className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 text-center leading-tight">
+                    <span className="text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 text-center leading-tight">
                       {category.name}
                     </span>
                   </Link>
