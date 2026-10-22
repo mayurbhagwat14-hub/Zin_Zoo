@@ -38,6 +38,7 @@ import {
   Minus,
   ChevronLeft,
   ChevronRight,
+  ArrowRight,
   Check,
   Share2,
 } from "lucide-react";
