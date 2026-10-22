@@ -2838,9 +2838,9 @@ export default function Home() {
                             const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
                             navigate(`/food/user/category/${slug}`);
                           }}
-                          className="flex-shrink-0 flex flex-col items-center gap-1 group w-[64px] xs:w-[72px] sm:w-[80px] cursor-pointer"
+                          className="flex-shrink-0 flex flex-col items-center gap-1 group w-[74px] xs:w-[78px] sm:w-[86px] md:w-[94px] cursor-pointer"
                         >
-                          <div className="relative w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300 bg-transparent">
+                          <div className="relative w-[70px] h-[70px] xs:w-[74px] xs:h-[74px] sm:w-[82px] sm:h-[82px] md:w-[88px] md:h-[88px] shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300 bg-transparent">
                             <img
                               src={categoryImage}
                               alt={category.name}
@@ -2857,9 +2857,9 @@ export default function Home() {
                     {displayCategories.length > 8 && (
                       <div
                         onClick={() => navigate("/food/user/categories")}
-                        className="flex-shrink-0 flex flex-col items-center justify-center gap-1 group w-[60px] xs:w-[68px] sm:w-[74px] cursor-pointer pt-3"
+                        className="flex-shrink-0 flex flex-col items-center justify-center gap-1 group w-[68px] xs:w-[72px] sm:w-[78px] cursor-pointer pt-3"
                       >
-                        <div className="w-10 h-10 xs:w-11 xs:h-11 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-[#F84E04] group-active:scale-90 transition-all duration-300">
+                        <div className="w-11 h-11 xs:w-12 xs:h-12 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-[#F84E04] group-active:scale-90 transition-all duration-300">
                           <ArrowRight className="w-4 h-4 text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors" />
                         </div>
                         <span className="text-[11px] xs:text-xs font-semibold text-gray-700 dark:text-gray-300 group-hover:text-[#F84E04] text-center leading-tight">
@@ -2878,7 +2878,7 @@ export default function Home() {
                       animate={{ y: 0 }}
                       exit={{ y: -200 }}
                       transition={{ duration: 0.3, ease: "easeOut" }}
-                      className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md shadow-md border-b border-gray-100 dark:border-gray-855 safe-top"
+                      className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-white dark:bg-[#121212] shadow-md border-b border-gray-100 dark:border-gray-800 safe-top"
                     >
                       {/* Search Bar Row (appears when scrolling up) */}
                       <AnimatePresence>
@@ -2921,7 +2921,7 @@ export default function Home() {
                       </AnimatePresence>
 
                       {/* Categories Slider (Sticky Mode) */}
-                      <div className="flex overflow-x-auto gap-2 sm:gap-2.5 py-1 px-4 scrollbar-hide mask-edge-fade border-b border-gray-100 dark:border-gray-800 items-start">
+                      <div className="flex overflow-x-auto gap-2 sm:gap-2.5 py-1 px-4 scrollbar-hide mask-edge-fade items-start bg-white dark:bg-[#121212]">
                         {(displayCategories.length > 8 ? displayCategories.slice(0, 8) : displayCategories).map((category, index) => {
                           const categoryImage = normalizeImageUrl(category.image || category.imageUrl) || category.image;
                           return (
@@ -2931,9 +2931,9 @@ export default function Home() {
                                 const slug = category.slug || category.name.toLowerCase().replace(/\s+/g, "-");
                                 navigate(`/food/user/category/${slug}`);
                               }}
-                              className="flex-shrink-0 flex flex-col items-center gap-0.5 group w-[54px] xs:w-[60px] sm:w-[66px] cursor-pointer"
+                              className="flex-shrink-0 flex flex-col items-center gap-0.5 group w-[58px] xs:w-[64px] sm:w-[70px] cursor-pointer"
                             >
-                              <div className="relative w-13 h-13 xs:w-14 xs:h-14 sm:w-15 sm:h-15 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300 bg-transparent">
+                              <div className="relative w-14 h-14 xs:w-15 xs:h-15 sm:w-16 sm:h-16 shrink-0 aspect-square flex items-center justify-center group-active:scale-95 transition-transform duration-300 bg-transparent">
                                 <img
                                   src={categoryImage}
                                   alt={category.name}
@@ -2950,7 +2950,7 @@ export default function Home() {
                         {displayCategories.length > 8 && (
                           <div
                             onClick={() => navigate("/food/user/categories")}
-                            className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 group w-[48px] xs:w-[54px] cursor-pointer pt-2"
+                            className="flex-shrink-0 flex flex-col items-center justify-center gap-0.5 group w-[52px] xs:w-[58px] cursor-pointer pt-2"
                           >
                             <div className="w-8 h-8 xs:w-9 xs:h-9 rounded-full bg-gray-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-[#F84E04] group-active:scale-90 transition-all duration-300">
                               <ArrowRight className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300 group-hover:text-white transition-colors" />
