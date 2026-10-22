@@ -102,6 +102,31 @@ export default function Customers() {
     }
   };
 
+  const getPaginationPages = (current, total) => {
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const pages = [];
+    if (current <= 4) {
+      for (let i = 1; i <= 5; i++) pages.push(i);
+      pages.push('...');
+      pages.push(total);
+    } else if (current >= total - 3) {
+      pages.push(1);
+      pages.push('...');
+      for (let i = total - 4; i <= total; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      pages.push('...');
+      pages.push(current - 1);
+      pages.push(current);
+      pages.push(current + 1);
+      pages.push('...');
+      pages.push(total);
+    }
+    return pages;
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, filters]);
@@ -568,39 +593,50 @@ export default function Customers() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="text-sm text-slate-500">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} of {filteredCustomers.length} customers
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  aria-label="Previous page"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-1 text-sm font-medium rounded-lg transition-all ${
-                        currentPage === page
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  {getPaginationPages(currentPage, totalPages).map((p, idx) => {
+                    if (p === '...') {
+                      return (
+                        <span key={`dots-${idx}`} className="px-2 py-1 text-xs font-bold text-slate-400 select-none">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => handlePageChange(p)}
+                        className={`w-8 h-8 flex items-center justify-center text-xs font-semibold rounded-lg transition-all ${
+                          currentPage === p
+                            ? "bg-[#F84E04] text-white shadow-sm"
+                            : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
                 </div>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  aria-label="Next page"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
