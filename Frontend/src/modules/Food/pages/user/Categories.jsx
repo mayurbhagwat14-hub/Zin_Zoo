@@ -135,15 +135,15 @@ export default function Categories() {
                     to={`/food/user/category/${category.slug}`}
                     className="flex flex-col items-center gap-1 group"
                   >
-                    <div className="relative w-full h-[62px] xs:h-[70px] sm:h-[78px] flex items-end justify-center group-active:scale-95 transition-all duration-300 bg-transparent">
+                    <div className="relative w-full aspect-square flex items-center justify-center group-active:scale-95 transition-all duration-300 bg-transparent">
                       <img
                         src={category.image}
                         alt={category.name}
                         loading="lazy"
-                        className="w-full h-full object-contain object-bottom scale-115 sm:scale-120 group-hover:scale-125 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none drop-shadow-sm"
+                        className="w-full h-full object-contain scale-110 sm:scale-115 group-hover:scale-120 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal pointer-events-none"
                       />
                     </div>
-                    <span className="text-xs sm:text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 text-center leading-tight line-clamp-2 tracking-tight capitalize min-h-[26px] xs:min-h-[28px] flex items-start justify-center">
+                    <span className="text-xs sm:text-[13px] font-semibold text-neutral-800 dark:text-neutral-200 text-center leading-tight line-clamp-2 tracking-tight capitalize">
                       {category.name}
                     </span>
                   </Link>
