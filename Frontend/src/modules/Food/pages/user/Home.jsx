@@ -2823,7 +2823,7 @@ export default function Home() {
                   <div className="flex items-center gap-2 min-w-0">
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white min-w-0 flex-shrink leading-tight">What's on your mind today?</h2>
                     <div className="h-[1px] bg-gray-100 dark:bg-gray-800 flex-1"></div>
-                    <Link to="/food/user/categories" className="text-sm font-bold text-gray-400 dark:text-gray-500 flex items-center gap-0.5 whitespace-nowrap shrink-0">
+                    <Link to="/food/user/categories" className="text-sm font-bold text-[#F84E04] hover:text-[#D94203] transition-colors flex items-center gap-0.5 whitespace-nowrap shrink-0">
                       View All <ArrowDownUp className="h-3 w-3 rotate-90" />
                     </Link>
                   </div>
