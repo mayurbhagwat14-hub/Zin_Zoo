@@ -27,17 +27,16 @@ async function silentRefresh(module) {
   const existingLock = localStorage.getItem(lockKey);
   if (existingLock) {
     const lockTime = parseInt(existingLock, 10);
-    if (Date.now() - lockTime < REFRESH_LOCK_TTL) {
-      // Another tab is refreshing — wait for it to finish, then reuse its token
-      await new Promise((resolve) => setTimeout(resolve, REFRESH_LOCK_TTL));
+    if (Date.now() - lockTime < 3000) {
+      // Another tab or process is refreshing — wait briefly, then reuse if ready
+      await new Promise((resolve) => setTimeout(resolve, 1200));
       const savedToken = localStorage.getItem(`${module}_accessToken`);
       if (savedToken && !isTokenExpired(savedToken)) {
         return { success: true, token: savedToken };
       }
-      return { success: false, reason: "invalid" };
     }
-    // Lock is stale — clear it and proceed
-    localStorage.removeItem(lockKey);
+    // Lock is stale or previous process terminated — safely clear it and proceed
+    try { localStorage.removeItem(lockKey); } catch (_) {}
   }
 
   // Acquire lock
@@ -70,11 +69,12 @@ async function silentRefresh(module) {
     }
     return { success: false, reason: "invalid" };
   } catch (err) {
-    if (err.response && err.response.status >= 400 && err.response.status < 500) {
-      // Client errors (401, 403, 400) mean the token is definitively invalid
+    const status = err?.response?.status;
+    if (status === 401 || status === 403) {
+      // Only definitive 401/403 means the refresh token is truly expired/invalid
       return { success: false, reason: "invalid" };
     }
-    // Network errors, timeouts, 500+ server errors — do NOT log user out
+    // Network errors, timeouts, cold-start latency, 500s, 400/404 — do NOT log user out
     return { success: false, reason: "network" };
   } finally {
     // Release lock
@@ -134,18 +134,18 @@ export default function ProtectedRoute({ children, requiredRole, loginPath = "/f
             detail: { module: requiredRole, token: result.token }
           }));
         } catch (_) {}
-      } else if (result.reason === "network") {
-        // Network error on startup — do NOT log the user out.
-        // The Axios interceptor will handle the refresh on the first API call.
-        setAuthState("authenticated");
-      } else {
-        // Token is definitively invalid — clear stale data and redirect to login
+      } else if (result.reason === "invalid") {
+        // Token is definitively invalid on server — clear stale data and redirect to login
         try {
           localStorage.removeItem(`${requiredRole}_accessToken`);
           localStorage.removeItem(`${requiredRole}_refreshToken`);
           localStorage.removeItem(`${requiredRole}_authenticated`);
         } catch (_) {}
         setAuthState("unauthenticated");
+      } else {
+        // Network error, startup latency, or timeout — keep user authenticated!
+        // The Axios interceptor will handle the refresh on the first API call once network is ready.
+        setAuthState("authenticated");
       }
     });
 

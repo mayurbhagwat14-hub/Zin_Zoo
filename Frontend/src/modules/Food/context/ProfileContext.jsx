@@ -91,7 +91,11 @@ export function ProfileProvider({ children }) {
 
   // Helper to check if authenticated
   const isAuthenticated = useMemo(() => {
-    return localStorage.getItem("user_authenticated") === "true" || !!localStorage.getItem("user_accessToken")
+    return (
+      localStorage.getItem("user_authenticated") === "true" ||
+      Boolean(localStorage.getItem("user_accessToken")) ||
+      Boolean(localStorage.getItem("user_refreshToken"))
+    )
   }, [userProfile])
 
   // Save to localStorage whenever userProfile, addresses or paymentMethods change
@@ -137,9 +141,11 @@ export function ProfileProvider({ children }) {
   // Fetch user profile and addresses from API on mount and when authentication changes
   useEffect(() => {
     const fetchUserProfile = async () => {
-      // Check if user is authenticated
-      const isAuthenticated = localStorage.getItem("user_authenticated") === "true" || 
-                             localStorage.getItem("user_accessToken")
+      // Check if user is authenticated (including valid refresh token)
+      const isAuthenticated =
+        localStorage.getItem("user_authenticated") === "true" ||
+        Boolean(localStorage.getItem("user_accessToken")) ||
+        Boolean(localStorage.getItem("user_refreshToken"))
       
       if (!isAuthenticated) {
         setUserProfile(null)

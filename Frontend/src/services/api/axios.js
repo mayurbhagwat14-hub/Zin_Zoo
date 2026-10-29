@@ -442,11 +442,12 @@ apiClient.interceptors.response.use(
         return apiClient(original);
       }
     } catch (refreshErr) {
-      if (refreshErr.response && refreshErr.response.status >= 400 && refreshErr.response.status < 500) {
-        // Client error (401, 403, 400) -> Token is invalid, clear auth
+      const status = refreshErr?.response?.status;
+      if (status === 401 || status === 403) {
+        // Client error (401, 403) -> Token is definitively invalid, clear auth
         onRefreshFailed(module);
       } else {
-        // Network error, Timeout, or 500+ Server error -> Keep auth, just reject the current request
+        // Network error, Timeout, 500+ Server error, or cold-start -> Keep auth!
         // We notify subscribers to reject their queued requests, but without clearing local storage
         refreshSubscribers.forEach((cb) => cb(null, module));
         refreshSubscribers = [];
@@ -456,7 +457,9 @@ apiClient.interceptors.response.use(
       isRefreshing = false;
     }
 
-    onRefreshFailed(module);
+    // Do NOT wipe auth if payload format differed or network blipped; keep session alive
+    refreshSubscribers.forEach((cb) => cb(null, module));
+    refreshSubscribers = [];
     return Promise.reject(err);
   }
 );
