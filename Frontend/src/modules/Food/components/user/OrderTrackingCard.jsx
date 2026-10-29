@@ -143,10 +143,7 @@ function OrderTrackingCardInner({ hasBottomNav = true }) {
         setApiOrders(list);
       }
     } catch (error) {
-      if (error?.response?.status === 401) {
-        localStorage.removeItem("user_accessToken");
-        localStorage.removeItem("accessToken");
-      }
+      // Do NOT eagerly wipe tokens here. The centralized Axios interceptor handles silent token refresh.
       if (lastApiFingerprintRef.current !== "") {
         lastApiFingerprintRef.current = "";
         setApiOrders([]);

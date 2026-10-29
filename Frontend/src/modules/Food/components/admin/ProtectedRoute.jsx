@@ -36,10 +36,25 @@ export default function ProtectedRoute({ children }) {
           setChecking(false)
         }
       } catch (_error) {
-        if (_error?.response?.status === 401 || _error?.response?.status === 403) {
-          clearModuleAuth("admin");
+        const status = _error?.response?.status;
+        if (status === 401) {
+          // Only clear if no refresh token exists or if refresh explicitly failed
+          const refreshToken = localStorage.getItem("admin_refreshToken");
+          if (!refreshToken) {
+            clearModuleAuth("admin");
+            if (isMounted) {
+              setAuthError(true);
+              setChecking(false);
+            }
+          } else {
+            // Give axios refresh interceptor a chance without immediately logging out
+            if (isMounted) {
+              setChecking(false);
+            }
+          }
+        } else if (status === 403) {
+          // 403 Forbidden is a permission issue, NOT an unauthenticated state - do NOT log out!
           if (isMounted) {
-            setAuthError(true);
             setChecking(false);
           }
         } else {

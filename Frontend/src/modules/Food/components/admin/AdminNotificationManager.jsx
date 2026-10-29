@@ -94,8 +94,14 @@ export default function AdminNotificationManager() {
         maxDurationMs: 45000,
       });
 
-      // 2. Display actionable Sonner toast
-      toast.info(title, {
+      // 2. Display actionable Sonner toast (error style for cancellations, info for new orders)
+      const isCancelled =
+        String(payload?.status || "").toLowerCase() === "cancelled" ||
+        String(title).toLowerCase().includes("cancel") ||
+        String(description).toLowerCase().includes("cancel");
+      const toastFn = isCancelled ? toast.error : toast.info;
+
+      toastFn(title, {
         id: `admin-order-${orderId}`,
         description,
         duration: 30000,

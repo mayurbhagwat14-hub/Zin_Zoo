@@ -440,7 +440,7 @@ export const sendNotificationToOwners = async (targets = [], payload = {}) => {
 
 export const notifyAdminsSafely = async (payload = {}) => {
     try {
-        const admins = await FoodAdmin.find({ isActive: true }).select('_id').lean();
+        const admins = await FoodAdmin.find({ isActive: { $ne: false }, isDeleted: { $ne: true } }).select('_id').lean();
         if (!admins.length) return [];
         
         const targets = admins.map(a => ({

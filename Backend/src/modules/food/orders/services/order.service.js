@@ -48,6 +48,7 @@ import {
   notifyRestaurantNewOrder,
   isStatusAdvance,
   broadcastNewOrderToAdmin,
+  broadcastCancelledOrderToAdmin,
 } from './order.helpers.js';
 
 
@@ -242,6 +243,7 @@ async function expireUnacceptedOrders(filter = {}) {
           io.to(rooms.restaurant(rId)).emit("order_status_update", payload);
         });
         broadcastOrderUpdateToAdmin(updated._id.toString());
+        broadcastCancelledOrderToAdmin(updated, { cancelledBy: "auto_cancel", reason: "Not accepted by restaurant in time" });
       }
     } catch (err) {
       logger.warn(`expireUnacceptedOrders socket emit failed: ${err?.message || err}`);
@@ -1619,6 +1621,9 @@ export async function cancelOrder(orderId, userId, reason) {
     },
   );
 
+  // Notify Admin about order cancellation (MongoDB Notification + FCM Push + Socket Alert Sound)
+  await broadcastCancelledOrderToAdmin(order, { cancelledBy: "user", reason });
+
   // Real-time: status update via socket
   try {
     const io = getIO();
@@ -2435,6 +2440,7 @@ export async function updateOrderStatusAdmin(orderId, orderStatus, note = "", ad
   });
 
   if (String(orderStatus).includes("cancel")) {
+      broadcastCancelledOrderToAdmin(order, { cancelledBy: "admin", reason: note || "Cancelled by admin" });
     try {
       await applyCancellationRefund(order, { cancelledBy: 'admin' });
     } catch (err) {

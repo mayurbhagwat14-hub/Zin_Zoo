@@ -165,7 +165,14 @@ function getModuleFromUrl(url = "") {
 
 function getModuleFromConfig(config) {
   if (config?.contextModule) return config.contextModule;
-  return getModuleFromUrl(config?.url);
+  const modFromUrl = getModuleFromUrl(config?.url);
+  if (modFromUrl === "user" && typeof window !== "undefined") {
+    const currentPath = String(window.location?.pathname || "").toLowerCase();
+    if (currentPath.startsWith("/admin") || currentPath.startsWith("/food/admin")) {
+      return "admin";
+    }
+  }
+  return modFromUrl;
 }
 
 function getAccessToken(config) {

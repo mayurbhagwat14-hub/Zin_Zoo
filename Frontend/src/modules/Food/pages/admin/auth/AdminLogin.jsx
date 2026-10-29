@@ -112,6 +112,11 @@ export default function AdminLogin() {
       }
       setAuthData("admin", accessToken, adminUser, refreshToken)
       scheduleProactiveRefresh("admin")
+      try {
+        import("@food/utils/firebaseMessaging").then(({ registerWebPushForCurrentModule }) => {
+          registerWebPushForCurrentModule("/admin/food").catch(() => {});
+        });
+      } catch (_) {}
       navigate("/admin/food", { replace: true })
     } catch (err) {
       const message =

@@ -463,3 +463,88 @@ export async function broadcastNewOrderToAdmin(order) {
     logger.warn(`Failed to broadcast new order to admin via sockets: ${err.message}`);
   }
 }
+
+export async function broadcastCancelledOrderToAdmin(order, { cancelledBy = 'user', reason = '' } = {}) {
+  try {
+    const orderId = order.order_id || order.orderId || order._id?.toString() || 'N/A';
+    const orderMongoId = order._id?.toString() || '';
+    const moduleType = order.moduleType || 'food';
+    const restaurantName = order.restaurantName || (order.items?.[0]?.restaurantName) || '';
+    const totalAmount = order.pricing?.total ?? order.pricing?.finalTotal ?? order.pricing?.amount ?? 0;
+
+    let moduleName = 'Food';
+    let link = '/admin/food/orders/all';
+    if (moduleType === 'grocery') {
+      moduleName = 'Grocery';
+      link = '/admin/food/grocery-orders/all';
+    } else if (moduleType === 'accessories') {
+      moduleName = 'Accessories';
+      link = '/admin/food/accessories-orders/all';
+    }
+
+    const cancellerMap = {
+      user: 'Customer',
+      restaurant: 'Restaurant',
+      admin: 'Admin',
+      auto_cancel: 'System (Timeout)',
+      system: 'System'
+    };
+    const byText = cancellerMap[cancelledBy] || cancelledBy;
+    const notifTitle = `Order Cancelled #${orderId}`;
+    const reasonText = reason ? ` Reason: ${reason}` : '';
+    const notifMessage = `${moduleName} Order #${orderId} was cancelled by ${byText}.${reasonText}`;
+
+    const payload = {
+      orderId,
+      orderMongoId,
+      moduleType,
+      restaurantName,
+      status: 'cancelled',
+      cancelledBy: byText,
+      reason: reason || '',
+      pricing: order.pricing,
+      link,
+      title: `❌ ${notifTitle}`,
+      message: notifMessage
+    };
+
+    await createAdminNotification({
+      title: `❌ ${notifTitle}`,
+      message: notifMessage,
+      type: 'order',
+      category: moduleType,
+      link,
+      metaData: payload
+    });
+
+    const io = getIO();
+    if (io) {
+      logger.info(`[Socket] Broadcasting cancelled order #${orderId} to admin-orders`);
+      io.to('admin-orders').emit('play_notification_sound', payload);
+      io.to('admin-orders').emit('admin_new_order', payload);
+      io.to('admin-orders').emit('adminNotificationsUpdated', payload);
+      io.to('admin-orders').emit('admin_order_update', { orderId: orderMongoId, timestamp: Date.now() });
+    }
+
+    // Dispatch FCM Push Notification to all active admins
+    try {
+      const { notifyAdminsSafely } = await import('../../../../core/notifications/firebase.service.js');
+      await notifyAdminsSafely({
+        title: `❌ ${notifTitle}`,
+        body: notifMessage,
+        data: {
+          type: 'order_cancelled',
+          orderId: String(orderId),
+          orderMongoId: String(orderMongoId),
+          moduleType: String(moduleType),
+          link
+        }
+      });
+      logger.info(`[FCM] Successfully dispatched cancel order push notification for #${orderId} to active admins`);
+    } catch (fcmErr) {
+      logger.warn(`Failed to dispatch FCM cancel push notification to admins: ${fcmErr.message}`);
+    }
+  } catch (err) {
+    logger.warn(`Failed to broadcast cancelled order to admin via sockets: ${err.message}`);
+  }
+}

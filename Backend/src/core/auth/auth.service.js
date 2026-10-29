@@ -497,15 +497,21 @@ export const refreshAccessToken = async (token) => {
     }
   }
 
+  // Preserve adminType if role is ADMIN
+  let adminType = payload.adminType;
+  if (!adminType && payload.role === "ADMIN") {
+    const adminDoc = await FoodAdmin.findById(payload.userId).select("adminType").lean();
+    adminType = adminDoc?.adminType || "super_admin";
+  }
+
   // Issue fresh tokens
-  const newAccessToken = signAccessToken({
+  const tokenPayload = {
     userId: payload.userId,
     role: payload.role,
-  });
-  const newRefreshToken = signRefreshToken({
-    userId: payload.userId,
-    role: payload.role,
-  });
+    ...(adminType ? { adminType } : {}),
+  };
+  const newAccessToken = signAccessToken(tokenPayload);
+  const newRefreshToken = signRefreshToken(tokenPayload);
 
   const ttlMs = ms(config.jwtRefreshExpiresIn || "90d");
   const expiresAt = new Date(Date.now() + ttlMs);

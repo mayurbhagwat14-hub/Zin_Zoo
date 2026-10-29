@@ -98,7 +98,7 @@ function normalizeModuleFromPath(pathname = window.location.pathname) {
 
 function hasModuleSession(moduleName = normalizeModuleFromPath()) {
   if (typeof window === "undefined") return false;
-  if (!moduleName || moduleName === "admin") return false;
+  if (!moduleName) return false;
   return Boolean(localStorage.getItem(`${moduleName}_accessToken`));
 }
 
@@ -700,6 +700,12 @@ async function saveTokenByModule(moduleName, token, platform = "web") {
   }
   if (moduleName === "user") {
     await userAPI.saveFcmToken(token, { platform });
+    return;
+  }
+  if (moduleName === "admin") {
+    const { adminAPI } = await import("@food/api");
+    await adminAPI.saveFcmToken(token, platform);
+    return;
   }
 }
 
@@ -895,9 +901,7 @@ export function initPushNotificationClient() {
     soundEnabled: isPushSoundEnabled(),
   });
 
-  if (moduleName === "admin") {
-    return;
-  }
+  // Admin push notifications enabled
 
   if (!hasModuleSession(moduleName)) {
     pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping push client init: module is logged out", { moduleName });
@@ -934,7 +938,6 @@ async function attachForegroundListener(firebaseAppInstance) {
 
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
   const moduleName = normalizeModuleFromPath(pathname);
-  if (moduleName === "admin") return;
   initPushNotificationClient();
 
   const accessToken = localStorage.getItem(`${moduleName}_accessToken`);
