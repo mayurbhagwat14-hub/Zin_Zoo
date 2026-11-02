@@ -543,6 +543,7 @@ export async function updateFood(req, res, next) {
             return res.status(404).json({ success: false, message: 'Food not found' });
         }
         broadcastPublicUpdate('food:product:update', { action: 'update', data: updated });
+        broadcastPublicUpdate('food:restaurant:update', { action: 'update', data: { restaurantId: updated.restaurantId } });
         res.status(200).json({ success: true, message: 'Food updated successfully', data: { food: updated } });
     } catch (error) {
         next(error);
