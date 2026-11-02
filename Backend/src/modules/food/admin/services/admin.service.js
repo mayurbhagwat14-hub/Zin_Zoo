@@ -3604,18 +3604,38 @@ export async function updateFood(id, body) {
     if (!id || !mongoose.Types.ObjectId.isValid(id)) return null;
     const doc = await FoodItem.findById(id);
     if (!doc) return null;
-    const restaurant = await FoodRestaurant.findById(doc.restaurantId);
+
+    const isRestaurantChanged = Boolean(
+        body.restaurantId &&
+        mongoose.Types.ObjectId.isValid(body.restaurantId) &&
+        String(doc.restaurantId) !== String(body.restaurantId)
+    );
+
+    let targetRestaurantId = doc.restaurantId;
+    if (body.restaurantId && mongoose.Types.ObjectId.isValid(body.restaurantId)) {
+        targetRestaurantId = new mongoose.Types.ObjectId(body.restaurantId);
+    }
+
+    const restaurant = await FoodRestaurant.findById(targetRestaurantId);
     if (!restaurant) throw new ValidationError('Restaurant not found');
-    if (body.name !== undefined) {
-        const nextName = String(body.name || '').trim();
+
+    if (isRestaurantChanged) {
+        doc.restaurantId = restaurant._id;
+        doc.zoneId = restaurant.zoneId || null;
+    } else if (restaurant) {
+        doc.zoneId = restaurant.zoneId || null;
+    }
+
+    if (body.name !== undefined || isRestaurantChanged) {
+        const nextName = body.name !== undefined ? String(body.name || '').trim() : doc.name;
         if (!nextName) throw new ValidationError('Food name is required');
         const duplicate = await FoodItem.findOne({
             _id: { $ne: doc._id },
-            restaurantId: doc.restaurantId,
-            name: { $regex: new RegExp(`^${nextName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
+            restaurantId: restaurant._id,
+            name: { $regex: new RegExp(`^${nextName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
         });
         if (duplicate) {
-            throw new ValidationError('A food item with this name already exists.');
+            throw new ValidationError('A food item with this name already exists in this restaurant.');
         }
         doc.name = nextName;
     }
