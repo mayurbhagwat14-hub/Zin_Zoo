@@ -3,8 +3,6 @@
 # ==============================================================================
 
 # ── Environment Variables (NEVER commit) ─────────────────────────────────────
-.env
-.env.*
 !.env.example
 */.env
 */.env.*
@@ -88,7 +86,6 @@ uploads/
 */uploads/
 
 # ── Editor Directories and Files ──────────────────────────────────────────────
-.vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
@@ -117,3 +114,4 @@ temp_interactive_push.bat
 
 # ── Markdown files (as requested) ─────────────────────────────────────────────
 *.md
+config.bat
