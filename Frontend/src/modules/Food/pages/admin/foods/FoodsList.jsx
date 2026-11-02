@@ -80,6 +80,8 @@ export default function FoodsList() {
   const [categoryOptions, setCategoryOptions] = useState([])
   const [categorySearch, setCategorySearch] = useState("")
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false)
+  const [restaurantPopoverOpen, setRestaurantPopoverOpen] = useState(false)
+  const [modalRestaurantSearch, setModalRestaurantSearch] = useState("")
   const [zones, setZones] = useState([])
   const [zonesLoading, setZonesLoading] = useState(false)
   const [selectedImageFile, setSelectedImageFile] = useState(null)
@@ -393,6 +395,8 @@ export default function FoodsList() {
     setImagePreviewUrl("")
     setCategorySearch("")
     setCategoryPopoverOpen(false)
+    setModalRestaurantSearch("")
+    setRestaurantPopoverOpen(false)
     setShowFoodFormModal(true)
   }
 
@@ -419,6 +423,8 @@ export default function FoodsList() {
     setImagePreviewUrl(String(food.image || ""))
     setCategorySearch("")
     setCategoryPopoverOpen(false)
+    setModalRestaurantSearch("")
+    setRestaurantPopoverOpen(false)
     setShowFoodFormModal(true)
   }
 
@@ -1072,6 +1078,8 @@ export default function FoodsList() {
             setCategoryOptions([])
             setCategorySearch("")
             setCategoryPopoverOpen(false)
+            setModalRestaurantSearch("")
+            setRestaurantPopoverOpen(false)
             setSelectedImageFile(null)
             setImagePreviewUrl("")
           }
@@ -1087,18 +1095,63 @@ export default function FoodsList() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Restaurant *</label>
-                <select
-                  value={foodForm.restaurantId}
-                  onChange={(e) => setFoodForm((prev) => ({ ...prev, restaurantId: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500"
-                >
-                  <option value="">Select restaurant</option>
-                  {restaurantOptions.map(({ id, name, type }) => (
-                    <option key={id} value={id}>
-                      {name}{type ? ` (${type})` : ""}
-                    </option>
-                  ))}
-                </select>
+                <Popover open={restaurantPopoverOpen} onOpenChange={setRestaurantPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white text-left flex items-center justify-between dark:bg-slate-800 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+                    >
+                      <span className={foodForm.restaurantId ? "text-slate-900 dark:text-white truncate" : "text-slate-400 dark:text-slate-500 truncate"}>
+                        {(() => {
+                          const matched = restaurantOptions.find((r) => String(r.id) === String(foodForm.restaurantId));
+                          if (matched) return `${matched.name}${matched.type ? ` (${matched.type})` : ""}`;
+                          return "Select restaurant";
+                        })()}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-slate-500 shrink-0 ml-2" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[260px] p-2 dark:bg-slate-900 dark:border-slate-800" align="start">
+                    <input
+                      type="text"
+                      value={modalRestaurantSearch}
+                      onChange={(e) => setModalRestaurantSearch(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-md text-sm bg-white mb-2 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+                      placeholder="Search restaurant..."
+                      autoFocus
+                    />
+                    <div className="max-h-56 overflow-y-auto">
+                      {restaurantOptions
+                        .filter((r) => {
+                          const q = String(modalRestaurantSearch || "").trim().toLowerCase();
+                          return !q || r.name.toLowerCase().includes(q);
+                        })
+                        .map((r) => (
+                          <button
+                            key={r.id}
+                            type="button"
+                            onClick={() => {
+                              setFoodForm((prev) => ({
+                                ...prev,
+                                restaurantId: r.id,
+                              }));
+                              setRestaurantPopoverOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                              String(foodForm.restaurantId) === String(r.id)
+                                ? "bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 font-medium"
+                                : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
+                            }`}
+                          >
+                            {r.name}{r.type ? ` (${r.type})` : ""}
+                          </button>
+                        ))}
+                      {restaurantOptions.length === 0 && (
+                        <div className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No restaurants found</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
