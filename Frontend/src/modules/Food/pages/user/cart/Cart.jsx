@@ -210,6 +210,7 @@ export default function Cart() {
   const [manualCouponCode, setManualCouponCode] = useState("")
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [isCodEnabled, setIsCodEnabled] = useState(true)
+  const [isWalletEnabled, setIsWalletEnabled] = useState(true)
   const [showPaymentSheet, setShowPaymentSheet] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
@@ -358,18 +359,32 @@ export default function Cart() {
         if (codFeature) {
           setIsCodEnabled(Boolean(codFeature.isEnabled))
         }
+        const walletFeature = rows.find((row) => row.key === "wallet_control")
+        if (walletFeature) {
+          setIsWalletEnabled(Boolean(walletFeature.isEnabled))
+        }
       } catch (_error) {
         // Keep default enabled if public feature API fails.
       }
     }
     loadFeatureSettings()
+    const handleFeatureUpdate = (event) => {
+      const detail = event?.detail || {}
+      if (detail.key === "cod_control") setIsCodEnabled(Boolean(detail.isEnabled))
+      if (detail.key === "wallet_control") setIsWalletEnabled(Boolean(detail.isEnabled))
+    }
+    window.addEventListener("adminFeatureSettingUpdated", handleFeatureUpdate)
+    return () => window.removeEventListener("adminFeatureSettingUpdated", handleFeatureUpdate)
   }, [])
 
   useEffect(() => {
     if (!isCodEnabled && selectedPaymentMethod === "cash") {
-      setSelectedPaymentMethod("wallet")
+      setSelectedPaymentMethod(isWalletEnabled ? "wallet" : "razorpay")
     }
-  }, [isCodEnabled, selectedPaymentMethod])
+    if (!isWalletEnabled && selectedPaymentMethod === "wallet") {
+      setSelectedPaymentMethod(isCodEnabled ? "cash" : "razorpay")
+    }
+  }, [isCodEnabled, isWalletEnabled, selectedPaymentMethod])
 
 
 
@@ -1845,7 +1860,12 @@ export default function Cart() {
         paymentMethod: orderPayload.paymentMethod
       });
 
-      // Check wallet balance if wallet payment selected
+      // Check wallet feature flag & balance if wallet payment selected
+      if (selectedPaymentMethod === "wallet" && !isWalletEnabled) {
+        toast.error("Wallet payment is currently disabled.")
+        setIsPlacingOrder(false)
+        return
+      }
       if (selectedPaymentMethod === "wallet" && walletBalance < total) {
         toast.error(`Insufficient wallet balance. Required: ${RUPEE_SYMBOL}${total.toFixed(0)}, Available: ${RUPEE_SYMBOL}${walletBalance.toFixed(0)}`)
         setIsPlacingOrder(false)
@@ -3012,7 +3032,7 @@ export default function Cart() {
             {/* Place Order Button */}
             <button
               onClick={handlePlaceOrder}
-              disabled={isPlacingOrder || (loadingPricing && !pricing) || (selectedPaymentMethod === "wallet" && walletBalance < total)}
+              disabled={isPlacingOrder || (loadingPricing && !pricing) || (selectedPaymentMethod === "wallet" && (!isWalletEnabled || walletBalance < total)) || (selectedPaymentMethod === "cash" && !isCodEnabled)}
               className="w-full text-white px-6 h-12 md:h-14 rounded-2xl font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between transition-transform active:scale-[0.98]"
               style={{
                 background: "linear-gradient(135deg, rgba(var(--module-theme-rgb,248,78,4),0.92), var(--module-theme-color,#F84E04))",
@@ -3323,22 +3343,22 @@ export default function Cart() {
 
                 <div className="space-y-3 overflow-y-auto pr-1 custom-scrollbar pb-4 flex-1 min-h-0">
                   {[
-                    {
+                    ...(isWalletEnabled ? [{
                       id: 'wallet',
                       name: 'Zinzoo Wallet',
                       description: `Available balance: ${RUPEE_SYMBOL}${walletBalance.toFixed(0)}`,
                       icon: <Wallet className="w-5 h-5" />,
                       color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
                       selectedColor: 'bg-orange-500 text-white'
-                    },
-                    {
+                    }] : []),
+                    ...(isCodEnabled ? [{
                       id: 'cash',
                       name: 'Cash on Delivery',
                       description: 'Pay with cash when order arrives',
                       icon: <Banknote className="w-5 h-5" />,
                       color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400',
                       selectedColor: 'bg-orange-500 text-white'
-                    }
+                    }] : [])
                   ].map((option) => (
                     <button
                       key={option.id}
@@ -3407,6 +3427,11 @@ export default function Cart() {
                       </div>
                     </button>
                   ))}
+                  {!isWalletEnabled && !isCodEnabled && (
+                    <div className="p-4 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center text-sm text-gray-500 dark:text-gray-400">
+                      No payment methods are currently available.
+                    </div>
+                  )}
                 </div>
 
                 <div

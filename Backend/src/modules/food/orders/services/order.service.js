@@ -31,6 +31,7 @@ import { fetchPolyline } from '../utils/googleMaps.js';
 import { getFirebaseDB } from '../../../../config/firebase.js';
 import * as foodTransactionService from './foodTransaction.service.js';
 import * as userWalletService from '../../user/services/userWallet.service.js';
+import { FEATURE_KEYS, isFeatureEnabled } from '../../admin/services/featureSettings.service.js';
 import { calculateOrderPricing } from './order-pricing.service.js';
 import * as paymentService from './order-payment.service.js';
 import {
@@ -458,8 +459,19 @@ async function createUnifiedOrder(userId, dto) {
   };
 }
 
+async function assertPaymentMethodEnabled(paymentMethod) {
+  const normalized = String(paymentMethod || '').trim().toLowerCase();
+  if (normalized === 'wallet') {
+    const walletEnabled = await isFeatureEnabled(FEATURE_KEYS.WALLET_CONTROL, true);
+    if (!walletEnabled) {
+      throw new ValidationError('Wallet payment is currently disabled by admin.');
+    }
+  }
+}
+
 // ----- Create order -----
 export async function createOrder(userId, dto, bypassRazorpay = false) {
+  await assertPaymentMethodEnabled(dto.paymentMethod);
   if (dto.moduleType === 'all' || dto.moduleType === 'unified') {
     return await createUnifiedOrder(userId, dto);
   }

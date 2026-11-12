@@ -3,6 +3,7 @@ import { FoodFeatureSetting } from '../models/featureSetting.model.js';
 export const FEATURE_KEYS = {
     RESTAURANT_SUBSCRIPTION: 'restaurant_subscription',
     COD_CONTROL: 'cod_control',
+    WALLET_CONTROL: 'wallet_control',
     ADMIN_ACCESS_SECTION: 'admin_access_section',
     ROOT_LANDING_AND_UNREGISTERED_CONTROL: 'root_landing_and_unregistered_control'
 };
@@ -18,6 +19,12 @@ const DEFAULT_FEATURES = [
         key: FEATURE_KEYS.COD_CONTROL,
         name: 'Cash On Delivery (COD)',
         description: 'Controls COD option visibility and delivery cash-limit related UI sections.',
+        isEnabled: true
+    },
+    {
+        key: FEATURE_KEYS.WALLET_CONTROL,
+        name: 'Zinzoo Wallet Payment',
+        description: 'Controls Zinzoo Wallet payment option visibility and usage at user checkout.',
         isEnabled: true
     },
     {
