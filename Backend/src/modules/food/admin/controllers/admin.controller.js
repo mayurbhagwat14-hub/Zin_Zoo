@@ -1780,6 +1780,7 @@ export async function updateFeatureSetting(req, res, next) {
         if (!data) {
             return res.status(404).json({ success: false, message: 'Feature not found' });
         }
+        broadcastPublicUpdate('food:feature_settings:update', data);
         res.status(200).json({ success: true, message: 'Feature setting updated successfully', data });
     } catch (error) {
         next(error);

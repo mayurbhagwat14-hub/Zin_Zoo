@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react"
 import { createPortal } from "react-dom"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles, Banknote, Zap, CheckCircle2, MessageCircle, Send, Mail, Copy, Coins, ShoppingCart, ShoppingBag } from "lucide-react"
@@ -21,6 +21,7 @@ import { getCompanyNameAsync } from "@food/utils/businessSettings"
 import { useCompanyName } from "@food/hooks/useCompanyName"
 import { getRestaurantAvailabilityStatus } from "@food/utils/restaurantAvailability"
 import useAppBackNavigation from "@food/hooks/useAppBackNavigation"
+import { usePublicSocket } from "@food/hooks/usePublicSocket"
 import { isModuleAuthenticated } from "@food/utils/auth"
 import { suppressForegroundNotification } from "@food/utils/firebaseMessaging"
 import zoopSound from "@food/assets/audio/zomato_sms.mp3"
@@ -350,32 +351,43 @@ export default function Cart() {
     gstRate: 0,
   })
 
-  useEffect(() => {
-    const loadFeatureSettings = async () => {
-      try {
-        const res = await restaurantAPI.getFeatureSettingsPublic()
-        const rows = Array.isArray(res?.data?.data) ? res.data.data : []
-        const codFeature = rows.find((row) => row.key === "cod_control")
-        if (codFeature) {
-          setIsCodEnabled(Boolean(codFeature.isEnabled))
-        }
-        const walletFeature = rows.find((row) => row.key === "wallet_control")
-        if (walletFeature) {
-          setIsWalletEnabled(Boolean(walletFeature.isEnabled))
-        }
-      } catch (_error) {
-        // Keep default enabled if public feature API fails.
-      }
+  const applyFeatureSettingRow = useCallback((row) => {
+    if (!row || typeof row !== "object") return
+    if (row.key === "cod_control") setIsCodEnabled(Boolean(row.isEnabled))
+    if (row.key === "wallet_control") setIsWalletEnabled(Boolean(row.isEnabled))
+  }, [])
+
+  const loadFeatureSettings = useCallback(async () => {
+    try {
+      const res = await restaurantAPI.getFeatureSettingsPublic()
+      const rows = Array.isArray(res?.data?.data) ? res.data.data : []
+      rows.forEach(applyFeatureSettingRow)
+    } catch (_error) {
+      // Keep current setting if public feature API fails.
     }
+  }, [applyFeatureSettingRow])
+
+  useEffect(() => {
     loadFeatureSettings()
     const handleFeatureUpdate = (event) => {
-      const detail = event?.detail || {}
-      if (detail.key === "cod_control") setIsCodEnabled(Boolean(detail.isEnabled))
-      if (detail.key === "wallet_control") setIsWalletEnabled(Boolean(detail.isEnabled))
+      applyFeatureSettingRow(event?.detail)
     }
     window.addEventListener("adminFeatureSettingUpdated", handleFeatureUpdate)
     return () => window.removeEventListener("adminFeatureSettingUpdated", handleFeatureUpdate)
-  }, [])
+  }, [loadFeatureSettings, applyFeatureSettingRow])
+
+  useEffect(() => {
+    if (showPaymentSheet) {
+      loadFeatureSettings()
+    }
+  }, [showPaymentSheet, loadFeatureSettings])
+
+  const featureSocketListeners = useMemo(() => ({
+    "food:feature_settings:update": (payload) => {
+      applyFeatureSettingRow(payload)
+    }
+  }), [applyFeatureSettingRow])
+  usePublicSocket(featureSocketListeners)
 
   useEffect(() => {
     if (!isCodEnabled && selectedPaymentMethod === "cash") {

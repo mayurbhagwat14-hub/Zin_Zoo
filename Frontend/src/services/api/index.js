@@ -336,10 +336,12 @@ export const adminAPI = {
     }),
   getFeatureSettings: () =>
     apiClient.get("/food/admin/feature-settings", {
+      params: { _t: Date.now() },
       contextModule: "admin",
     }),
   getPublicFeatureSettings: () =>
     apiClient.get("/food/admin/feature-settings/public", {
+      params: { _t: Date.now() },
       contextModule: "user",
     }),
   updateFeatureSetting: (key, body) =>
@@ -1381,6 +1383,7 @@ export const restaurantAPI = {
     }),
   getFeatureSettingsPublic: () =>
     apiClient.get("/food/admin/feature-settings/public", {
+      params: { _t: Date.now() },
       contextModule: "restaurant",
     }),
   getOrderById: (orderId) =>

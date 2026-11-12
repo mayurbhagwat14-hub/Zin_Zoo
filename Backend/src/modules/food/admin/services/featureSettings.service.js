@@ -42,7 +42,10 @@ const DEFAULT_FEATURES = [
 ];
 
 export async function ensureDefaultFeatureSettings() {
-    for (const feature of DEFAULT_FEATURES) {
+    const existingDocs = await FoodFeatureSetting.find({}).select('key').lean();
+    const existingKeys = new Set(existingDocs.map((doc) => doc.key));
+    const missing = DEFAULT_FEATURES.filter((feature) => !existingKeys.has(feature.key));
+    for (const feature of missing) {
         await FoodFeatureSetting.updateOne(
             { key: feature.key },
             { $setOnInsert: feature },
@@ -65,7 +68,11 @@ export async function listFeatureSettings() {
 
 export async function updateFeatureSetting(key, payload = {}) {
     await ensureDefaultFeatureSettings();
-    const nextEnabled = Boolean(payload?.isEnabled);
+    const rawEnabled = payload?.isEnabled;
+    const nextEnabled =
+        typeof rawEnabled === 'string'
+            ? rawEnabled.trim().toLowerCase() === 'true'
+            : Boolean(rawEnabled);
     const updated = await FoodFeatureSetting.findOneAndUpdate(
         { key: String(key || '').trim() },
         { $set: { isEnabled: nextEnabled } },

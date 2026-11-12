@@ -17,6 +17,7 @@ const FEATURE_KEYS = {
 export default function FeatureSettings() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [savingKey, setSavingKey] = useState(null);
     const [features, setFeatures] = useState([]);
 
     const restaurantSubscription = useMemo(
@@ -60,12 +61,38 @@ export default function FeatureSettings() {
         load();
     }, []);
 
-    const setToggle = (key, checked) => {
-        setFeatures((prev) =>
-            prev.map((row) =>
-                row.key === key ? { ...row, isEnabled: Boolean(checked) } : row
-            )
-        );
+    const setToggle = async (key, checked) => {
+        const nextEnabled = Boolean(checked);
+        const previousFeatures = features;
+        setFeatures((prev) => {
+            const exists = prev.some((row) => row.key === key);
+            if (!exists) {
+                return [...prev, { key, isEnabled: nextEnabled }];
+            }
+            return prev.map((row) =>
+                row.key === key ? { ...row, isEnabled: nextEnabled } : row
+            );
+        });
+
+        try {
+            setSavingKey(key);
+            const res = await adminAPI.updateFeatureSetting(key, { isEnabled: nextEnabled });
+            const savedRow = res?.data?.data;
+            if (savedRow?.key) {
+                setFeatures((prev) =>
+                    prev.map((row) => (row.key === savedRow.key ? { ...row, ...savedRow } : row))
+                );
+            }
+            window.dispatchEvent(new CustomEvent('adminFeatureSettingUpdated', {
+                detail: { key, isEnabled: nextEnabled }
+            }));
+            toast.success(`${savedRow?.name || 'Feature setting'} ${nextEnabled ? 'enabled' : 'disabled'}.`);
+        } catch (error) {
+            setFeatures(previousFeatures);
+            toast.error(error?.response?.data?.message || 'Failed to update feature setting.');
+        } finally {
+            setSavingKey(null);
+        }
     };
 
     const handleSave = async () => {
@@ -150,6 +177,7 @@ export default function FeatureSettings() {
                     </div>
                     <Switch
                         checked={Boolean(codControl?.isEnabled)}
+                        disabled={savingKey === FEATURE_KEYS.COD_CONTROL}
                         onCheckedChange={(checked) => setToggle(FEATURE_KEYS.COD_CONTROL, checked)}
                     />
                 </CardContent>
@@ -170,6 +198,7 @@ export default function FeatureSettings() {
                     </div>
                     <Switch
                         checked={Boolean(walletControl?.isEnabled)}
+                        disabled={savingKey === FEATURE_KEYS.WALLET_CONTROL}
                         onCheckedChange={(checked) => setToggle(FEATURE_KEYS.WALLET_CONTROL, checked)}
                     />
                 </CardContent>
@@ -190,6 +219,7 @@ export default function FeatureSettings() {
                     </div>
                     <Switch
                         checked={Boolean(adminAccessSection?.isEnabled)}
+                        disabled={savingKey === FEATURE_KEYS.ADMIN_ACCESS_SECTION}
                         onCheckedChange={(checked) => setToggle(FEATURE_KEYS.ADMIN_ACCESS_SECTION, checked)}
                     />
                 </CardContent>
@@ -210,6 +240,7 @@ export default function FeatureSettings() {
                     </div>
                     <Switch
                         checked={Boolean(rootLandingAndUnregisteredControl?.isEnabled)}
+                        disabled={savingKey === FEATURE_KEYS.ROOT_LANDING_AND_UNREGISTERED_CONTROL}
                         onCheckedChange={(checked) => setToggle(FEATURE_KEYS.ROOT_LANDING_AND_UNREGISTERED_CONTROL, checked)}
                     />
                 </CardContent>
