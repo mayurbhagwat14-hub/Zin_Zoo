@@ -211,7 +211,7 @@ export default function Cart() {
   const [manualCouponCode, setManualCouponCode] = useState("")
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [isCodEnabled, setIsCodEnabled] = useState(true)
-  const [isWalletEnabled, setIsWalletEnabled] = useState(true)
+  const [isWalletEnabled, setIsWalletEnabled] = useState(false)
   const [showPaymentSheet, setShowPaymentSheet] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
