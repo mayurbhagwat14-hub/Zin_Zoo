@@ -76,18 +76,21 @@ export const validateCreateOfferDto = (body) => {
     if (endDate && startDate && endDate.getTime() <= startDate.getTime()) {
         throw new ValidationError('endDate must be after startDate');
     }
-    if (endDate && endDate.getTime() <= Date.now()) {
-        throw new ValidationError('endDate must be a future date');
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+    if (endDate && endDate.getTime() < startOfToday.getTime()) {
+        throw new ValidationError('endDate cannot be in the past');
     }
-    // Business rule: percentage coupon must have maxDiscount; flat ignores it
+    // maxDiscount: optional cap for percentage coupons; null/omitted means uncapped
     let maxDiscount = result.data.maxDiscount;
     if (result.data.discountType === 'percentage') {
-        if (maxDiscount === undefined || maxDiscount === null || Number.isNaN(Number(maxDiscount))) {
-            throw new ValidationError('maxDiscount is required for percentage coupons');
+        if (maxDiscount !== undefined && maxDiscount !== null && !Number.isNaN(Number(maxDiscount)) && Number(maxDiscount) > 0) {
+            maxDiscount = Math.max(0, Number(maxDiscount) || 0);
+        } else {
+            maxDiscount = null;
         }
-        maxDiscount = Math.max(0, Number(maxDiscount) || 0);
     } else {
-        maxDiscount = undefined; // ignore for flat-price
+        maxDiscount = null; // ignore for flat-price
     }
 
     const restaurantIds = result.data.restaurantScope === 'selected'

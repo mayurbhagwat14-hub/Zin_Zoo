@@ -447,8 +447,10 @@ export default function Coupons() {
     const value = Number(f.discountValue)
     if (!String(f.couponCode || "").trim()) e.couponCode = "Coupon code is required"
     if (!Number.isFinite(value) || value <= 0) e.discountValue = "Discount must be greater than 0"
-    if (pct && (f.maxDiscount === "" || f.maxDiscount === null || f.maxDiscount === undefined)) {
-      e.maxDiscount = "Max discount is required for percentage coupons"
+    if (pct && f.maxDiscount !== "" && f.maxDiscount !== null && f.maxDiscount !== undefined) {
+      if (Number(f.maxDiscount) <= 0) {
+        e.maxDiscount = "Max discount must be greater than 0"
+      }
     }
     if (f.minOrderValue !== "" && Number(f.minOrderValue) < 0) e.minOrderValue = "Min order cannot be negative"
     if (f.usageLimit !== "" && Number(f.usageLimit) < 1) e.usageLimit = "Usage limit must be at least 1"
@@ -471,9 +473,10 @@ export default function Coupons() {
       e.itemIds = "Select at least one item"
     }
     const start = f.startDate ? new Date(`${f.startDate}T00:00:00`) : null
-    const end = f.endDate ? new Date(`${f.endDate}T00:00:00`) : null
-    const now = new Date()
-    if (end && end < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+    const end = f.endDate ? new Date(`${f.endDate}T23:59:59`) : null
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    if (end && end < todayStart) {
       e.endDate = "End date cannot be in the past"
     }
     if (start && end && start > end) {
@@ -537,22 +540,6 @@ export default function Coupons() {
       return
     }
     const next = { ...formData, [field]: value }
-    // Date constraints
-    if (field === "startDate" && next.endDate) {
-      // Ensure startDate <= endDate
-      const s = next.startDate ? new Date(`${next.startDate}T00:00:00`) : null
-      const e = new Date(`${next.endDate}T00:00:00`)
-      if (s && s > e) {
-        // keep but will show error
-      }
-    }
-    if (field === "endDate" && next.startDate) {
-      const s = new Date(`${next.startDate}T00:00:00`)
-      const e = next.endDate ? new Date(`${next.endDate}T00:00:00`) : null
-      if (e && e < s) {
-        // keep but will show error
-      }
-    }
     setFormData(next)
     validateForm(next)
     if (submitError) {
@@ -583,36 +570,46 @@ export default function Coupons() {
       adminBearPercentage: "100",
       restaurantBearPercentage: "0",
     })
+    setErrors({})
+    setSubmitError("")
+    setSubmitSuccess("")
   }
 
   const handleCreateCoupon = async (e) => {
     e.preventDefault()
     setSubmitError("")
     setSubmitSuccess("")
-    const { valid } = validateForm()
+    const { valid, e: validationErrors } = validateForm()
     if (!valid) {
-      setSubmitError("Please fix the highlighted errors")
+      setErrors(validationErrors)
+      const firstError = Object.values(validationErrors)[0]
+      setSubmitError(firstError || "Please fix the highlighted errors")
+      toast.error(firstError || "Please fix the highlighted errors")
       return
     }
 
     if (!formData.couponCode.trim()) {
       setSubmitError("Coupon code is required")
+      toast.error("Coupon code is required")
       return
     }
 
     const parsedDiscountValue = Number(formData.discountValue)
     if (!Number.isFinite(parsedDiscountValue) || parsedDiscountValue <= 0) {
       setSubmitError("Discount value must be greater than 0")
+      toast.error("Discount value must be greater than 0")
       return
     }
 
     const isFood = !formData.moduleType || formData.moduleType === "food"
     if (isFood && formData.restaurantScope === "selected" && formData.restaurantIds.length === 0) {
       setSubmitError("Please select at least one restaurant")
+      toast.error("Please select at least one restaurant")
       return
     }
     if (!isFood && formData.itemIds.length === 0) {
       setSubmitError("Please select at least one item")
+      toast.error("Please select at least one item")
       return
     }
 
@@ -634,17 +631,21 @@ export default function Coupons() {
         usageLimit: formData.usageLimit !== "" ? Number(formData.usageLimit) : undefined,
         perUserLimit: formData.perUserLimit !== "" ? Number(formData.perUserLimit) : undefined,
         isFirstOrderOnly: Boolean(formData.isFirstOrderOnly),
-        adminBearPercentage: Number(formData.adminBearPercentage),
-        restaurantBearPercentage: Number(formData.restaurantBearPercentage),
+        adminBearPercentage: isFood ? Number(formData.adminBearPercentage || 100) : 100,
+        restaurantBearPercentage: isFood ? Number(formData.restaurantBearPercentage || 0) : 0,
       }
       await adminAPI.createAdminOffer(payload)
 
+      toast.success("Coupon created successfully!")
       setSubmitSuccess("Coupon created successfully")
       resetForm()
+      setIsAddOpen(false)
       await fetchOffers()
     } catch (err) {
       debugError("Error creating coupon:", err)
-      setSubmitError(err?.response?.data?.message || "Failed to create coupon")
+      const msg = err?.response?.data?.message || "Failed to create coupon"
+      setSubmitError(msg)
+      toast.error(msg)
     } finally {
       setIsSubmitting(false)
     }
@@ -702,12 +703,15 @@ export default function Coupons() {
   }, [offers, searchQuery])
 
   return (
-    <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-3 sm:p-4 lg:p-6 bg-slate-50 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
-            <h1 className="text-2xl font-bold text-slate-900">Restaurant Offers & Coupons</h1>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Restaurant Offers & Coupons</h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Manage and create platform offers, percentage discounts, and flat coupons</p>
+            </div>
             <button
               type="button"
               onClick={() => {
@@ -715,9 +719,9 @@ export default function Coupons() {
                 setSubmitError("")
                 setSubmitSuccess("")
               }}
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-95 transition-all text-center"
             >
-              {isAddOpen ? "Close" : "Add Coupon"}
+              {isAddOpen ? "Close Form" : "+ Add Coupon"}
             </button>
           </div>
 
@@ -850,19 +854,20 @@ export default function Coupons() {
               </div>
 
                 <div title={formData.discountType === "flat-price" ? "Max discount is not applicable for flat coupons" : ""}>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Max Discount (₹, optional)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Max Discount (₹, optional)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
                     value={formData.maxDiscount}
                     onChange={(e) => handleFormChange("maxDiscount", e.target.value)}
-                  placeholder="e.g. 100"
+                    placeholder={formData.discountType === "flat-price" ? "Not applicable" : "e.g. 100 (optional)"}
                     disabled={formData.discountType === "flat-price"}
                     className={`w-full px-3 py-2.5 text-sm rounded-lg border ${errors.maxDiscount ? "border-red-500" : "border-slate-300"} bg-white disabled:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                />
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">Leave blank for unlimited discount</p>
                   {formData.discountType === "percentage" && errors.maxDiscount && <p className="mt-1 text-xs text-red-600">{errors.maxDiscount}</p>}
-              </div>
+                </div>
 
               {(!formData.moduleType || formData.moduleType === "food") && (
                 <>
@@ -985,13 +990,23 @@ export default function Coupons() {
                 </div>
               )}
 
-              <div className="mt-4">
+              <div className="mt-5 pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center gap-3">
                 <button
                   type="submit"
-                  disabled={isSubmitting || Object.keys(errors).length > 0}
-                  className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm"
                 >
                   {isSubmitting ? "Creating..." : "Create Coupon"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddOpen(false)
+                    resetForm()
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
                 </button>
               </div>
             </form>
@@ -1011,12 +1026,12 @@ export default function Coupons() {
         </div>
 
         {/* Offers List */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
               Offers List
             </h2>
-            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
+            <span className="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold bg-slate-100 text-slate-700">
               {filteredOffers.length} {filteredOffers.length === 1 ? 'offer' : 'offers'}
             </span>
           </div>
@@ -1039,8 +1054,140 @@ export default function Coupons() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <>
+              {/* Mobile Card List (< md screens) */}
+              <div className="block md:hidden space-y-3">
+                {filteredOffers.map((offer) => {
+                  const expired = offer.endDate ? (new Date(offer.endDate).getTime() < new Date(new Date().toDateString()).getTime()) : false
+                  const status = expired ? 'expired' : (offer.status || 'inactive')
+                  const cls =
+                    status === 'active'
+                      ? 'bg-green-100 text-green-700'
+                      : status === 'paused'
+                      ? 'bg-orange-100 text-orange-700'
+                      : status === 'expired'
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-700'
+
+                  return (
+                    <div
+                      key={`mob-${offer.offerId}-${offer.dishId}`}
+                      className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3 hover:border-slate-300 transition"
+                    >
+                      {/* Top: Code, Status & Cart Toggle */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">
+                            {offer.couponCode}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${cls}`}>
+                            {status}
+                          </span>
+                        </div>
+                        {/* Show In Cart Switch */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[11px] text-slate-500 font-medium">Cart:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleShowInCart(offer.offerId, offer.dishId, offer.showInCart !== false)}
+                            disabled={!!updatingCartVisibility[`${offer.offerId}-${offer.dishId}`]}
+                            className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+                              offer.showInCart !== false ? "bg-green-600" : "bg-slate-300"
+                            } disabled:opacity-60`}
+                            aria-label="Toggle show in cart"
+                          >
+                            <span
+                              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                                offer.showInCart !== false ? "translate-x-5" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Details Box */}
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                        <div>
+                          <span className="text-slate-500 block text-[11px]">Discount:</span>
+                          <span className="font-bold text-slate-900 text-sm">
+                            {offer.discountType === 'flat-price'
+                              ? `₹${offer.originalPrice - offer.discountedPrice} OFF`
+                              : `${offer.discountPercentage}% OFF${Number(offer.maxDiscount) ? ` (up to ₹${Number(offer.maxDiscount)})` : ""}`}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[11px]">Min Order:</span>
+                          <span className="font-semibold text-slate-800">
+                            {Number(offer.minOrderValue) ? `₹${Number(offer.minOrderValue)}` : "None"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[11px]">Scope:</span>
+                          <span className="font-medium text-slate-800 truncate block">
+                            {offer.moduleType === "grocery"
+                              ? "Grocery"
+                              : offer.moduleType === "accessories"
+                                ? "Accessories"
+                                : offer.restaurantScope === "all" || offer.restaurantName === "All Restaurants"
+                                  ? "Global / All"
+                                  : offer.restaurantName}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[11px]">Customer Scope:</span>
+                          <span className="font-medium text-slate-800">
+                            {offer.customerGroup === "new" ? "First-time Users" : "All Users"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[11px]">Usage:</span>
+                          <span className="font-medium text-slate-800">
+                            {`${Number(offer.usedCount || 0)} / ${Number(offer.usageLimit || 0) > 0 ? Number(offer.usageLimit) : "∞"}`}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block text-[11px]">Valid Until:</span>
+                          <span className="font-medium text-slate-800">
+                            {offer.endDate
+                              ? (() => {
+                                  const d = new Date(offer.endDate)
+                                  const dd = String(d.getDate()).padStart(2, '0')
+                                  const month = d.toLocaleString('en-US', { month: 'short' })
+                                  const yyyy = d.getFullYear()
+                                  return `${dd} ${month} ${yyyy}`
+                                })()
+                              : 'No expiry'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Action Buttons */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => setViewingOffer(offer)}
+                          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          View Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteOffer(offer.offerId)}
+                          disabled={!!deletingOffer[offer.offerId]}
+                          className="px-3.5 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-60 transition"
+                        >
+                          {deletingOffer[offer.offerId] ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Desktop Table (>= md screens) */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full min-w-[1100px]">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">SI</th>
@@ -1209,6 +1356,7 @@ export default function Coupons() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </div>
@@ -1238,8 +1386,8 @@ export default function Coupons() {
         }
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-100">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-xl p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-100 max-h-[85vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-100">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-2xl p-4 sm:p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-100 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between border-b dark:border-slate-800 pb-3">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Coupon Details</h3>
                 <button
