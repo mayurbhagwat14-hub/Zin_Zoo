@@ -45,6 +45,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const showLoadingSkeleton = useDelayedLoading(isLoading, { delay: 120, minDuration: 360 })
   const seenOrderIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
+  const fetchInFlightRef = useRef(false)
   const fallbackAudioRef = useRef(null)
   const notificationAudioRef = useRef(null)
   const audioContextRef = useRef(null)
@@ -229,6 +230,11 @@ export default function OrdersPage({ statusKey = "all" }) {
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
 
+    // Skip background polls while a previous request is still in flight,
+    // otherwise slow responses stack up and overload the API.
+    if (silent && withRingCheck && fetchInFlightRef.current) return
+    fetchInFlightRef.current = true
+
     try {
       if (!silent) setIsLoading(true)
       const params = {
@@ -294,6 +300,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       }
       setOrders([])
     } finally {
+      fetchInFlightRef.current = false
       if (!silent) setIsLoading(false)
     }
   }, [statusKey, playDefaultRing, showBrowserNotification, startAlertLoop])

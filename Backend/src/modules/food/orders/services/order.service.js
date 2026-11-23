@@ -2303,9 +2303,17 @@ export async function listOrdersAdmin(query) {
 
     const groceryFilter = { ...filter };
 
-    const [foodDocs, groceryDocs] = await Promise.all([
+    // Only the newest (skip + limit) docs from each collection can land in the
+    // requested page of the merged, createdAt-desc list. Fetching everything
+    // (previous behaviour) loaded + populated every order on each request and
+    // made the endpoint time out / run out of memory as data grew.
+    const fetchCount = skip + limit;
+
+    const [foodDocs, groceryDocs, foodTotal, groceryTotal] = await Promise.all([
       FoodOrder.find(foodFilter)
         .select("+deliveryOtp")
+        .sort({ createdAt: -1 })
+        .limit(fetchCount)
         .populate("userId", "name phone email")
         .populate("dispatch.deliveryPartnerId", "name phone")
         .populate("restaurantId", "restaurantName ownerPhone primaryContactNumber phone")
@@ -2313,19 +2321,27 @@ export async function listOrdersAdmin(query) {
         .lean(),
       GroceryOrder.find(groceryFilter)
         .select("+deliveryOtp")
+        .sort({ createdAt: -1 })
+        .limit(fetchCount)
         .populate("userId", "name phone email")
         .populate("dispatch.deliveryPartnerId", "name phone")
         .lean(),
+      FoodOrder.countDocuments(foodFilter),
+      GroceryOrder.countDocuments(groceryFilter),
     ]);
-
-    await resolveFoodOrdersItemRestaurants(foodDocs);
 
     const allDocs = [...foodDocs, ...groceryDocs].sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
-    total = allDocs.length;
+    total = foodTotal + groceryTotal;
     docs = allDocs.slice(skip, skip + limit);
+
+    // Resolve item restaurants only for the food orders actually returned.
+    const groceryIdSet = new Set(groceryDocs.map((d) => String(d._id)));
+    await resolveFoodOrdersItemRestaurants(
+      docs.filter((d) => !groceryIdSet.has(String(d._id)))
+    );
   }
 
   const paginated = buildPaginatedResult({ docs: docs.map(d => normalizeOrderForClient(d)), total, page, limit });
