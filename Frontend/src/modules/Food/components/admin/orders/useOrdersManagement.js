@@ -89,7 +89,7 @@ const imageUrlToDataUrl = async (url) => {
 }
 
 export function useOrdersManagement(orders, statusKey, title, moduleType = "food") {
-  const isRestaurantModule = moduleType === "food";
+  const isRestaurantModule = moduleType === "food" || moduleType === "all";
 
   const [searchQuery, setSearchQuery] = useState("")
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -121,7 +121,7 @@ export function useOrdersManagement(orders, statusKey, title, moduleType = "food
 
   // Get unique restaurants from orders
   const restaurants = useMemo(() => {
-    return [...new Set(orders.map(o => o.restaurant))]
+    return [...new Set(orders.map(o => o.restaurant).filter(Boolean))]
   }, [orders])
 
   // Apply search and filters
@@ -146,6 +146,12 @@ export function useOrdersManagement(orders, statusKey, title, moduleType = "food
             .toLowerCase()
             .includes(query) ||
           String(order.restaurant || "")
+            .toLowerCase()
+            .includes(query) ||
+          String(order.category || "")
+            .toLowerCase()
+            .includes(query) ||
+          String(order.moduleType || "")
             .toLowerCase()
             .includes(query) ||
           String(order.customerPhone || "").includes(query) ||

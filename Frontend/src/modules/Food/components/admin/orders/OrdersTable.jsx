@@ -141,7 +141,7 @@ export default function OrdersTable({
   showAssignedDeliveryPartner = false,
 }) {
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
   const [expandedItems, setExpandedItems] = useState({})
   const totalPages = Math.max(1, Math.ceil(orders.length / itemsPerPage))
 
@@ -157,6 +157,27 @@ export default function OrdersTable({
     const end = start + itemsPerPage
     return orders.slice(start, end)
   }, [orders, currentPage, itemsPerPage])
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
+    }
+    const pages = []
+    pages.push(1)
+    if (currentPage > 3) {
+      pages.push("ellipsis-1")
+    }
+    const start = Math.max(2, currentPage - 1)
+    const end = Math.min(totalPages - 1, currentPage + 1)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (currentPage < totalPages - 2) {
+      pages.push("ellipsis-2")
+    }
+    pages.push(totalPages)
+    return pages
+  }
 
   const formatRestaurantName = (name) => {
     if (name === "Cafe Monarch") return "Café Monarch"
@@ -326,7 +347,20 @@ export default function OrdersTable({
                 )}
                 {visibleColumns.orderId && (
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-900">{order.orderId}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{order.orderId}</span>
+                      {order.category && (
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          String(order.category).toLowerCase() === 'food' 
+                            ? 'bg-orange-100 text-orange-700' 
+                            : String(order.category).toLowerCase() === 'accessories'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {order.category}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 )}
                 {visibleColumns.orderDate && (
@@ -724,6 +758,17 @@ export default function OrdersTable({
                     <span className="text-sm font-bold text-slate-900 tracking-tight">
                       {order.orderId}
                     </span>
+                    {order.category && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        String(order.category).toLowerCase() === 'food' 
+                          ? 'bg-orange-100 text-orange-700' 
+                          : String(order.category).toLowerCase() === 'accessories'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {order.category}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-slate-500 mt-0.5 font-medium">
                     {order.date}, {order.time}
@@ -1010,89 +1055,99 @@ export default function OrdersTable({
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+      {orders.length > 0 && (
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600 text-center sm:text-left">
             <div>
               Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
               <span className="font-semibold">{Math.min(currentPage * itemsPerPage, orders.length)}</span> of{" "}
               <span className="font-semibold">{orders.length}</span> orders
+              {totalPages > 1 && (
+                <span className="text-slate-400 ml-1.5 font-normal">
+                  (Page {currentPage} of {totalPages})
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1.5 ml-0 sm:ml-2">
-              <span className="text-xs text-slate-500">Per page:</span>
+              <span className="text-xs text-slate-500 font-medium">Per page:</span>
               <select
-                value={itemsPerPage}
+                value={itemsPerPage >= 10000 ? "all" : itemsPerPage}
                 onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value))
+                  const val = e.target.value === "all" ? 10000 : Number(e.target.value)
+                  setItemsPerPage(val)
                   setCurrentPage(1)
                 }}
-                className="px-2 py-1 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                className="px-2 py-1 bg-white border border-slate-300 rounded-md text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-xs"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
                 <option value={100}>100</option>
+                <option value={200}>200</option>
+                <option value={500}>500</option>
+                <option value="all">All ({orders.length})</option>
               </select>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="px-2.5 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[38px]"
-              title="First Page"
-            >
-              «
-            </button>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
-            >
-              Previous
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum
-                if (totalPages <= 5) {
-                  pageNum = i + 1
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i
-                } else {
-                  pageNum = currentPage - 2 + i
-                }
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-all min-h-[38px] ${currentPage === pageNum
-                        ? "bg-emerald-500 text-white shadow-md"
-                        : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-2.5 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[38px]"
+                title="First Page"
+              >
+                «
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((item, i) => {
+                  if (typeof item === 'string') {
+                    return (
+                      <span key={`ellipsis-${i}`} className="px-2 py-1 text-slate-400 font-semibold select-none text-xs sm:text-sm">
+                        ...
+                      </span>
+                    )
+                  }
+                  return (
+                    <button
+                      key={item}
+                      onClick={() => setCurrentPage(item)}
+                      className={`px-3 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all min-h-[38px] ${
+                        currentPage === item
+                          ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                          : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                       }`}
-                  >
-                    {pageNum}
-                  </button>
-                )
-              })}
+                    >
+                      {item}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[38px]"
+                title="Last Page"
+              >
+                »
+              </button>
             </div>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-2.5 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[38px]"
-              title="Last Page"
-            >
-              »
-            </button>
-          </div>
+          )}
         </div>
       )}
     </div>

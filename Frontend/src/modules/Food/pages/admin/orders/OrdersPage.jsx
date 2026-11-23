@@ -36,6 +36,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const config = statusConfig[statusKey] || statusConfig["all"]
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedModule, setSelectedModule] = useState("all")
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
   const [deletingOrderId, setDeletingOrderId] = useState(null)
@@ -233,7 +234,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       const params = {
         page: 1,
         limit: 10000,
-        moduleType: "food",
+        moduleType: statusKey === "all" ? "all" : "food",
         status:
           statusKey === "all"
             ? undefined
@@ -409,16 +410,21 @@ export default function OrdersPage({ statusKey = "all" }) {
 
       const customerName = order.customerName || order.userId?.name || "N/A"
       const customerPhone = order.customerPhone || order.userId?.phone || "N/A"
+      const rawModule = String(order.moduleType || (order.category ? order.category.toLowerCase() : "food")).toLowerCase()
+      const moduleType = rawModule === "accessories" ? "accessories" : rawModule === "grocery" ? "grocery" : "food"
+      const category = order.category || (moduleType === "grocery" ? "Grocery" : moduleType === "accessories" ? "Accessories" : "Food")
       const restaurant =
         order.restaurant ||
         order.restaurantName ||
         order.restaurantId?.restaurantName ||
-        ""
+        (moduleType === "grocery" ? "Grocery Store" : moduleType === "accessories" ? "Accessories Store" : "")
 
       return {
         ...order,
         id: order._id || order.id,
         orderId: order.orderId || order.id,
+        moduleType,
+        category,
         date,
         time,
         customerName,
@@ -470,7 +476,22 @@ export default function OrdersPage({ statusKey = "all" }) {
     handlePrintOrder,
     toggleColumn,
     resetColumns,
-  } = useOrdersManagement(normalizedOrders, statusKey, config.title, "food")
+  } = useOrdersManagement(normalizedOrders, statusKey, config.title, statusKey === "all" ? "all" : "food")
+
+  const moduleCounts = useMemo(() => {
+    const counts = { all: filteredOrders.length, food: 0, grocery: 0, accessories: 0 }
+    filteredOrders.forEach((o) => {
+      const mod = String(o.moduleType || "food").toLowerCase()
+      if (counts[mod] !== undefined) counts[mod]++
+      else counts.food++
+    })
+    return counts
+  }, [filteredOrders])
+
+  const displayedOrders = useMemo(() => {
+    if (statusKey !== "all" || selectedModule === "all") return filteredOrders
+    return filteredOrders.filter((o) => String(o.moduleType || "food").toLowerCase() === selectedModule)
+  }, [filteredOrders, statusKey, selectedModule])
 
   useEffect(() => {
     isFirstLoadRef.current = true
@@ -955,7 +976,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden">
       <OrdersTopbar 
         title={config.title} 
-        count={count} 
+        count={displayedOrders.length} 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onFilterClick={() => setIsFilterOpen(true)}
@@ -963,6 +984,35 @@ export default function OrdersPage({ statusKey = "all" }) {
         onExport={handleExport}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
+      {statusKey === "all" && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {[
+            { id: "all", label: "All Orders", count: moduleCounts.all },
+            { id: "food", label: "Food", count: moduleCounts.food },
+            { id: "grocery", label: "Grocery", count: moduleCounts.grocery },
+            { id: "accessories", label: "Accessories", count: moduleCounts.accessories },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedModule(tab.id)}
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
+                selectedModule === tab.id
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                selectedModule === tab.id
+                  ? "bg-slate-700 text-white"
+                  : "bg-slate-100 text-slate-600"
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
       <FilterPanel
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
@@ -1004,7 +1054,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         isProcessing={processingRefund !== null}
       />
       <OrdersTable 
-        orders={filteredOrders} 
+        orders={displayedOrders} 
         visibleColumns={visibleColumns}
         onViewOrder={handleViewOrder}
         onPrintOrder={handlePrintOrder}

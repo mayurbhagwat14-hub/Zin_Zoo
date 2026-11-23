@@ -2064,6 +2064,41 @@ async function resolveFoodOrdersItemRestaurants(ordersList) {
   const foodItemCache = new Map();
   const restaurantCache = new Map();
 
+  const missingItemIds = [];
+  for (const doc of ordersList) {
+    if (doc.items && Array.isArray(doc.items)) {
+      for (const item of doc.items) {
+        if (!item.restaurantName || String(item.restaurantName).trim() === "") {
+          if (item.itemId && mongoose.Types.ObjectId.isValid(item.itemId)) {
+            missingItemIds.push(new mongoose.Types.ObjectId(item.itemId));
+          }
+        }
+      }
+    }
+  }
+
+  if (missingItemIds.length > 0) {
+    try {
+      const foodItems = await mongoose.model('FoodItem').find({ _id: { $in: missingItemIds } }).select('_id restaurantId').lean();
+      const rIds = [...new Set(foodItems.map(f => f.restaurantId).filter(id => id && mongoose.Types.ObjectId.isValid(id)))];
+      const restaurants = rIds.length > 0 
+        ? await mongoose.model('FoodRestaurant').find({ _id: { $in: rIds } }).select('_id restaurantName').lean()
+        : [];
+
+      for (const r of restaurants) {
+        restaurantCache.set(String(r._id), r.restaurantName || "ZinZooX");
+      }
+
+      for (const fi of foodItems) {
+        const rId = String(fi.restaurantId || "");
+        const rName = restaurantCache.get(rId) || "ZinZooX";
+        foodItemCache.set(String(fi._id), { restaurantId: rId, restaurantName: rName });
+      }
+    } catch (batchErr) {
+      logger.warn(`Failed to batch resolve restaurants for items: ${batchErr.message}`);
+    }
+  }
+
   for (const doc of ordersList) {
     if (doc.items && Array.isArray(doc.items)) {
       let changed = false;
@@ -2071,24 +2106,6 @@ async function resolveFoodOrdersItemRestaurants(ordersList) {
         if (!item.restaurantName || String(item.restaurantName).trim() === "") {
           const itemKey = String(item.itemId);
           let resolved = foodItemCache.get(itemKey);
-          if (!resolved) {
-            try {
-              const foodItem = await mongoose.model('FoodItem').findById(item.itemId).lean();
-              if (foodItem && foodItem.restaurantId) {
-                const rId = String(foodItem.restaurantId);
-                let rName = restaurantCache.get(rId);
-                if (!rName) {
-                  const restDoc = await mongoose.model('FoodRestaurant').findById(rId).select('restaurantName').lean();
-                  rName = restDoc?.restaurantName || "ZinZooX";
-                  restaurantCache.set(rId, rName);
-                }
-                resolved = { restaurantId: rId, restaurantName: rName };
-                foodItemCache.set(itemKey, resolved);
-              }
-            } catch (err) {
-              logger.warn(`Failed to dynamically resolve restaurant for item ${item.itemId}: ${err.message}`);
-            }
-          }
 
           if (resolved) {
             item.restaurantId = resolved.restaurantId;
