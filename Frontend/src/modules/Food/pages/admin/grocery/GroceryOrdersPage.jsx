@@ -224,7 +224,7 @@ export default function GroceryOrdersPage({ statusKey = "all" }) {
       if (!silent) setIsLoading(true)
       const params = {
         page: 1,
-        limit: 1000,
+        limit: 10000,
         status:
           statusKey === "all"
             ? undefined

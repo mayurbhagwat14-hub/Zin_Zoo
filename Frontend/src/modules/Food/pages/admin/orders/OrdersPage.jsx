@@ -232,7 +232,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       if (!silent) setIsLoading(true)
       const params = {
         page: 1,
-        limit: 1000,
+        limit: 10000,
         moduleType: "food",
         status:
           statusKey === "all"

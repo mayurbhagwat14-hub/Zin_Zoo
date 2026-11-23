@@ -141,20 +141,22 @@ export default function OrdersTable({
   showAssignedDeliveryPartner = false,
 }) {
   const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [expandedItems, setExpandedItems] = useState({})
-  const itemsPerPage = 10
-  const totalPages = Math.ceil(orders.length / itemsPerPage)
+  const totalPages = Math.max(1, Math.ceil(orders.length / itemsPerPage))
 
-  // Reset to page 1 when orders change
+  // Ensure currentPage does not exceed totalPages when filtered orders change
   useEffect(() => {
-    setCurrentPage(1)
-  }, [orders.length])
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [totalPages, currentPage])
 
   const paginatedOrders = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
     const end = start + itemsPerPage
     return orders.slice(start, end)
-  }, [orders, currentPage])
+  }, [orders, currentPage, itemsPerPage])
 
   const formatRestaurantName = (name) => {
     if (name === "Cafe Monarch") return "Café Monarch"
@@ -1010,12 +1012,38 @@ export default function OrdersTable({
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs sm:text-sm text-slate-600 text-center sm:text-left">
-            Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
-            <span className="font-semibold">{Math.min(currentPage * itemsPerPage, orders.length)}</span> of{" "}
-            <span className="font-semibold">{orders.length}</span> orders
+          <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600 text-center sm:text-left">
+            <div>
+              Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+              <span className="font-semibold">{Math.min(currentPage * itemsPerPage, orders.length)}</span> of{" "}
+              <span className="font-semibold">{orders.length}</span> orders
+            </div>
+            <div className="flex items-center gap-1.5 ml-0 sm:ml-2">
+              <span className="text-xs text-slate-500">Per page:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
+                className="px-2 py-1 bg-white border border-slate-300 rounded-md text-xs font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-2.5 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[38px]"
+              title="First Page"
+            >
+              «
+            </button>
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
@@ -1055,6 +1083,14 @@ export default function OrdersTable({
               className="px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all min-h-[38px]"
             >
               Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-2.5 py-2 text-xs sm:text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all min-h-[38px]"
+              title="Last Page"
+            >
+              »
             </button>
           </div>
         </div>

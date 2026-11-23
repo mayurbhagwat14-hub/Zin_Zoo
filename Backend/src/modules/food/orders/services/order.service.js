@@ -2109,7 +2109,7 @@ async function resolveFoodOrdersItemRestaurants(ordersList) {
 }
 
 export async function listOrdersAdmin(query) {
-  const { page, limit, skip } = buildPaginationOptions(query);
+  const { page, limit, skip } = buildPaginationOptions(query, 50, 50000);
   const moduleType = query.moduleType || 'food';
   // Base payment filter: Allow cash/wallet immediately, but require Razorpay/QR to be paid/authorized
   const paymentFilter = {
