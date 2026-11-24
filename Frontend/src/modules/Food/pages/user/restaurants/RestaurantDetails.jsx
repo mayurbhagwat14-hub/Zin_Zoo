@@ -648,6 +648,12 @@ function RestaurantDetailsContent() {
             // Availability fields for grayscale styling
             isActive: actualRestaurant?.isActive !== false, // Default to true if not specified
             isAcceptingOrders: actualRestaurant?.isAcceptingOrders !== false, // Default to true if not specified
+            // Veg / Non-Veg / Both as set by admin (was previously dropped, so UI always showed "Both")
+            pureVegRestaurant: Boolean(actualRestaurant?.pureVegRestaurant ?? apiRestaurant?.pureVegRestaurant),
+            restaurantType:
+              actualRestaurant?.restaurantType ||
+              apiRestaurant?.restaurantType ||
+              ((actualRestaurant?.pureVegRestaurant ?? apiRestaurant?.pureVegRestaurant) ? "Veg" : "Both"),
           }
 
           debugLog('? Transformed restaurant:', transformedRestaurant)
