@@ -297,6 +297,7 @@ orderSchema.index({
     orderStatus: 1,
     createdAt: -1
 });
+orderSchema.index({ createdAt: -1 });
 orderSchema.index({ 'payment.status': 1, createdAt: -1 });
 orderSchema.index({ 'payment.method': 1, createdAt: -1 });
 

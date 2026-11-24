@@ -702,6 +702,50 @@ export const adminAPI = {
       params: { limit: 50, page: 1, ...params },
       contextModule: "admin",
     }),
+  /**
+   * Fetch every matching admin order by walking the paginated endpoint.
+   * The backend caps `limit` per request (ADMIN_ORDERS_MAX_LIMIT = 500), so a
+   * single `limit: 10000` call can't return everything and is slow/time-outs.
+   * `onPage(ordersSoFar, meta)` lets callers render progressively.
+   * `isCancelled()` aborts the walk (e.g. when the page unmounts / filter changes).
+   */
+  getAllOrders: async (params = {}, { pageSize = 500, maxPages = 200, onPage, isCancelled } = {}) => {
+    const all = [];
+    const seen = new Set();
+    let page = 1;
+    let totalPages = 1;
+    let meta = null;
+    do {
+      const response = await apiClient.get("/food/admin/orders", {
+        params: { ...params, page, limit: pageSize },
+        contextModule: "admin",
+      });
+      if (isCancelled?.()) return { orders: all, meta, cancelled: true };
+      if (!response?.data?.success) {
+        const err = new Error(response?.data?.message || "Failed to fetch orders");
+        err.response = response;
+        throw err;
+      }
+      const payload = response.data.data || {};
+      const batch = Array.isArray(payload.orders)
+        ? payload.orders
+        : Array.isArray(payload.data)
+          ? payload.data
+          : [];
+      meta = payload.meta || null;
+      for (const order of batch) {
+        const key = String(order?._id || order?.id || order?.orderId || "");
+        if (key && seen.has(key)) continue;
+        if (key) seen.add(key);
+        all.push(order);
+      }
+      totalPages = Number(meta?.totalPages) || 1;
+      onPage?.(all.slice(), meta);
+      if (batch.length < pageSize) break;
+      page += 1;
+    } while (page <= totalPages && page <= maxPages);
+    return { orders: all, meta, cancelled: false };
+  },
   getOrderById: (orderId) =>
     apiClient.get(`/food/admin/orders/${String(orderId)}`, {
       contextModule: "admin",

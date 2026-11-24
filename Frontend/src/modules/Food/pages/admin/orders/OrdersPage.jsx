@@ -227,49 +227,48 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }, [statusKey])
 
+  // Orders are loaded in two ways:
+  //  - "full":   walks every page (500/request) so the table has all orders.
+  //              Used on first load, filter change and after admin actions.
+  //  - "latest": fetches only the newest 50 and merges them in. Used by the 5s
+  //              poll and socket events so we don't re-download every order
+  //              each time (that was what made the API time out / hit limits).
+  const getOrderKey = (order) => String(order?._id || order?.id || order?.orderId || "")
+
+  const buildOrderParams = useCallback(() => ({
+    moduleType: statusKey === "all" ? "all" : "food",
+    status:
+      statusKey === "all"
+        ? undefined
+        : statusKey === "restaurant-cancelled"
+          ? "cancelled"
+          : statusKey,
+    cancelledBy: statusKey === "restaurant-cancelled" ? "restaurant" : undefined,
+  }), [statusKey])
+
+  const fullLoadGenRef = useRef(0)
+
   const fetchOrders = useCallback(async (options = {}) => {
-    const { silent = false, withRingCheck = false } = options
+    const { silent = false, withRingCheck = false, mode = "full" } = options
+    const params = buildOrderParams()
 
-    // Skip background polls while a previous request is still in flight,
-    // otherwise slow responses stack up and overload the API.
-    if (silent && withRingCheck && fetchInFlightRef.current) return
-    fetchInFlightRef.current = true
-
-    try {
-      if (!silent) setIsLoading(true)
-      const params = {
-        page: 1,
-        limit: 10000,
-        moduleType: statusKey === "all" ? "all" : "food",
-        status:
-          statusKey === "all"
-            ? undefined
-            : statusKey === "restaurant-cancelled"
-              ? "cancelled"
-              : statusKey,
-        cancelledBy: statusKey === "restaurant-cancelled" ? "restaurant" : undefined,
-      }
-
-      const response = await adminAPI.getOrders(params)
-
-      const rawOrders =
-        response?.data?.data?.orders ??
-        response?.data?.orders ??
-        response?.data?.data?.docs ??
-        response?.data?.data
-      const nextOrders = Array.isArray(rawOrders) ? rawOrders : []
-
-      if (response.data?.success) {
-        const nextOrderIds = new Set(
-          nextOrders
-            .map((order) => order.id || order._id || order.orderId)
-            .filter(Boolean),
-        )
+    if (mode === "latest") {
+      // Skip overlapping light refreshes and don't run them during a full load.
+      if (fetchInFlightRef.current) return
+      fetchInFlightRef.current = true
+      try {
+        const response = await adminAPI.getOrders({ ...params, page: 1, limit: 50 })
+        if (!response?.data?.success) return
+        const payload = response.data.data || {}
+        const latest = Array.isArray(payload.orders)
+          ? payload.orders
+          : Array.isArray(payload.data) ? payload.data : []
 
         if (withRingCheck && !isFirstLoadRef.current && statusKey === "all") {
-          const hasNewOrder = [...nextOrderIds].some(
-            (id) => !seenOrderIdsRef.current.has(id),
-          )
+          const hasNewOrder = latest.some((o) => {
+            const key = getOrderKey(o)
+            return key && !seenOrderIdsRef.current.has(key)
+          })
           if (hasNewOrder) {
             activeOrderAlertRef.current = { orderId: "polling-new-order" }
             playDefaultRing()
@@ -284,26 +283,71 @@ export default function OrdersPage({ statusKey = "all" }) {
             toast.info("New order received")
           }
         }
+        latest.forEach((o) => {
+          const key = getOrderKey(o)
+          if (key) seenOrderIdsRef.current.add(key)
+        })
 
-        seenOrderIdsRef.current = nextOrderIds
-        isFirstLoadRef.current = false
-        setOrders(nextOrders)
-      } else {
-        debugError("Failed to fetch orders:", response.data)
-        if (!silent) toast.error("Failed to fetch orders")
-        setOrders([])
+        setOrders((prev) => {
+          const latestByKey = new Map(latest.map((o) => [getOrderKey(o), o]))
+          const merged = prev.map((o) => latestByKey.get(getOrderKey(o)) || o)
+          const existing = new Set(prev.map(getOrderKey))
+          const fresh = latest.filter((o) => !existing.has(getOrderKey(o)))
+          if (fresh.length === 0) return merged
+          return [...fresh, ...merged].sort(
+            (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+          )
+        })
+      } catch (error) {
+        debugError("Error refreshing latest orders:", error)
+      } finally {
+        fetchInFlightRef.current = false
       }
+      return
+    }
+
+    // Full load – newer call cancels any older one still paging.
+    const gen = ++fullLoadGenRef.current
+    const isCancelled = () => gen !== fullLoadGenRef.current
+    fetchInFlightRef.current = true
+    if (!silent) setIsLoading(true)
+    let firstPageShown = false
+
+    try {
+      const { orders: allOrders, cancelled } = await adminAPI.getAllOrders(params, {
+        pageSize: 500,
+        isCancelled,
+        onPage: (soFar) => {
+          if (isCancelled()) return
+          soFar.forEach((o) => {
+            const key = getOrderKey(o)
+            if (key) seenOrderIdsRef.current.add(key)
+          })
+          // Render the first page immediately; keep paging in the background.
+          if (!firstPageShown || silent) {
+            firstPageShown = true
+            if (!silent) setIsLoading(false)
+          }
+          setOrders(soFar)
+        },
+      })
+      if (cancelled || isCancelled()) return
+      setOrders(allOrders)
+      isFirstLoadRef.current = false
     } catch (error) {
+      if (isCancelled()) return
       debugError("Error fetching orders:", error)
       if (!silent) {
-        toast.error(error.response?.data?.message || "Failed to fetch orders")
+        toast.error(error.response?.data?.message || error.message || "Failed to fetch orders")
       }
-      setOrders([])
+      // Keep whatever was already loaded instead of wiping the table.
     } finally {
-      fetchInFlightRef.current = false
-      if (!silent) setIsLoading(false)
+      if (!isCancelled()) {
+        fetchInFlightRef.current = false
+        if (!silent) setIsLoading(false)
+      }
     }
-  }, [statusKey, playDefaultRing, showBrowserNotification, startAlertLoop])
+  }, [statusKey, buildOrderParams, playDefaultRing, showBrowserNotification, startAlertLoop])
 
   const normalizedOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : []
@@ -504,13 +548,15 @@ export default function OrdersPage({ statusKey = "all" }) {
     isFirstLoadRef.current = true
     seenOrderIdsRef.current = new Set()
     fetchOrders({ silent: false, withRingCheck: false })
+    // Stop any in-progress page walk when leaving / switching tabs.
+    return () => { fullLoadGenRef.current += 1; fetchInFlightRef.current = false }
   }, [fetchOrders])
 
   useEffect(() => {
     if (statusKey !== "all") return undefined
 
     const pollId = setInterval(() => {
-      fetchOrders({ silent: true, withRingCheck: true })
+      fetchOrders({ silent: true, withRingCheck: true, mode: "latest" })
     }, 5000)
 
     return () => clearInterval(pollId)
@@ -550,7 +596,7 @@ export default function OrdersPage({ statusKey = "all" }) {
           "A new order arrived",
           `admin-order-socket-${Date.now()}`,
         )
-        fetchOrders({ silent: true, withRingCheck: false })
+        fetchOrders({ silent: true, withRingCheck: false, mode: "latest" })
         window.dispatchEvent(new Event("adminNotificationsUpdated"))
         return
       }
@@ -570,12 +616,12 @@ export default function OrdersPage({ statusKey = "all" }) {
       startAlertLoop()
       toast.info(title, { id: `admin-order-${orderId}`, description: body })
       showBrowserNotification(title, body, `admin-order-${orderId}`)
-      fetchOrders({ silent: true, withRingCheck: false })
+      fetchOrders({ silent: true, withRingCheck: false, mode: "latest" })
       window.dispatchEvent(new Event("adminNotificationsUpdated"))
     }
 
     const handleIncomingRealtimeOrderUpdate = (payload = {}) => {
-      fetchOrders({ silent: true, withRingCheck: false })
+      fetchOrders({ silent: true, withRingCheck: false, mode: "latest" })
       window.dispatchEvent(new Event("adminNotificationsUpdated"))
     }
 

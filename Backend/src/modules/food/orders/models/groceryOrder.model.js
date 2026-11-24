@@ -245,6 +245,7 @@ const groceryOrderSchema = new mongoose.Schema(
 
 groceryOrderSchema.index({ userId: 1, createdAt: -1 });
 groceryOrderSchema.index({ orderStatus: 1, createdAt: -1 });
+groceryOrderSchema.index({ createdAt: -1 });
 
 groceryOrderSchema.pre('save', async function (next) {
     if (!this.order_id) {

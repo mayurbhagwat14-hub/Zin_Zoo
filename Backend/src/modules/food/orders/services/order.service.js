@@ -2125,8 +2125,13 @@ async function resolveFoodOrdersItemRestaurants(ordersList) {
   }
 }
 
+// Hard cap per request: each order is fully populated (user, restaurant,
+// delivery partner, item restaurants), so huge limits (e.g. 10000) made this
+// endpoint time out. Clients that need everything page through it.
+const ADMIN_ORDERS_MAX_LIMIT = 500;
+
 export async function listOrdersAdmin(query) {
-  const { page, limit, skip } = buildPaginationOptions(query, 50, 50000);
+  const { page, limit, skip } = buildPaginationOptions(query, 50, ADMIN_ORDERS_MAX_LIMIT);
   const moduleType = query.moduleType || 'food';
   // Base payment filter: Allow cash/wallet immediately, but require Razorpay/QR to be paid/authorized
   const paymentFilter = {
@@ -2307,40 +2312,51 @@ export async function listOrdersAdmin(query) {
     // requested page of the merged, createdAt-desc list. Fetching everything
     // (previous behaviour) loaded + populated every order on each request and
     // made the endpoint time out / run out of memory as data grew.
+    // Step 1 fetches only _id + createdAt (cheap, index-backed) to work out
+    // which orders belong on this page; step 2 loads + populates just those.
     const fetchCount = skip + limit;
 
-    const [foodDocs, groceryDocs, foodTotal, groceryTotal] = await Promise.all([
-      FoodOrder.find(foodFilter)
-        .select("+deliveryOtp")
-        .sort({ createdAt: -1 })
-        .limit(fetchCount)
-        .populate("userId", "name phone email")
-        .populate("dispatch.deliveryPartnerId", "name phone")
-        .populate("restaurantId", "restaurantName ownerPhone primaryContactNumber phone")
-        .populate("restaurantIds", "restaurantName ownerPhone primaryContactNumber phone")
-        .lean(),
-      GroceryOrder.find(groceryFilter)
-        .select("+deliveryOtp")
-        .sort({ createdAt: -1 })
-        .limit(fetchCount)
-        .populate("userId", "name phone email")
-        .populate("dispatch.deliveryPartnerId", "name phone")
-        .lean(),
+    const [foodKeys, groceryKeys, foodTotal, groceryTotal] = await Promise.all([
+      FoodOrder.find(foodFilter).select("_id createdAt").sort({ createdAt: -1 }).limit(fetchCount).lean(),
+      GroceryOrder.find(groceryFilter).select("_id createdAt").sort({ createdAt: -1 }).limit(fetchCount).lean(),
       FoodOrder.countDocuments(foodFilter),
       GroceryOrder.countDocuments(groceryFilter),
     ]);
 
-    const allDocs = [...foodDocs, ...groceryDocs].sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+    const pageKeys = [
+      ...foodKeys.map((d) => ({ id: d._id, createdAt: d.createdAt, kind: "food" })),
+      ...groceryKeys.map((d) => ({ id: d._id, createdAt: d.createdAt, kind: "grocery" })),
+    ]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(skip, skip + limit);
+
+    const foodIds = pageKeys.filter((k) => k.kind === "food").map((k) => k.id);
+    const groceryIds = pageKeys.filter((k) => k.kind === "grocery").map((k) => k.id);
+
+    const [foodDocs, groceryDocs] = await Promise.all([
+      foodIds.length
+        ? FoodOrder.find({ _id: { $in: foodIds } })
+            .select("+deliveryOtp")
+            .populate("userId", "name phone email")
+            .populate("dispatch.deliveryPartnerId", "name phone")
+            .populate("restaurantId", "restaurantName ownerPhone primaryContactNumber phone")
+            .populate("restaurantIds", "restaurantName ownerPhone primaryContactNumber phone")
+            .lean()
+        : [],
+      groceryIds.length
+        ? GroceryOrder.find({ _id: { $in: groceryIds } })
+            .select("+deliveryOtp")
+            .populate("userId", "name phone email")
+            .populate("dispatch.deliveryPartnerId", "name phone")
+            .lean()
+        : [],
+    ]);
+
+    await resolveFoodOrdersItemRestaurants(foodDocs);
 
     total = foodTotal + groceryTotal;
-    docs = allDocs.slice(skip, skip + limit);
-
-    // Resolve item restaurants only for the food orders actually returned.
-    const groceryIdSet = new Set(groceryDocs.map((d) => String(d._id)));
-    await resolveFoodOrdersItemRestaurants(
-      docs.filter((d) => !groceryIdSet.has(String(d._id)))
+    docs = [...foodDocs, ...groceryDocs].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
   }
 

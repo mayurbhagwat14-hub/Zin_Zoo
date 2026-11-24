@@ -119,15 +119,15 @@ export default function RegularOrderReport() {
     try {
       const { fromDate, toDate } = getDateRange()
       const params = {
-        page: 1,
-        limit: 10000,
         ...(filters.zone !== "All Zones" && { zoneId: filters.zone }),
         ...(filters.moduleType !== "all" && { moduleType: filters.moduleType }),
         ...(fromDate && { startDate: fromDate.toISOString().split('T')[0] }),
         ...(toDate && { endDate: toDate.toISOString().split('T')[0] }),
       }
 
-      const response = await adminAPI.getOrders(params)
+      // Backend caps each request at 500 orders, so page through all of them.
+      const { orders: allOrders } = await adminAPI.getAllOrders(params, { pageSize: 500 })
+      const response = { data: { success: true, data: { orders: allOrders } } }
 
       if (response.data?.success) {
         // Transform backend orders (FoodOrder docs) to report format
