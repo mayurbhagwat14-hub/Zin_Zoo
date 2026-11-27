@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react"
 import { useSearchParams } from "react-router-dom"
 import io from "socket.io-client"
 import { FileText, Calendar, Package } from "lucide-react"
@@ -20,6 +20,11 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+// First paint loads only this many orders (table shows 20/page), the rest
+// load in the background in bigger chunks.
+const INITIAL_ORDERS_LIMIT = 40
+const BACKGROUND_ORDERS_PAGE_SIZE = 300
+
 
 // Status configuration with titles, colors, and icons
 const statusConfig = {
@@ -36,6 +41,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const config = statusConfig[statusKey] || statusConfig["all"]
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [selectedModule, setSelectedModule] = useState("all")
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
@@ -311,28 +317,54 @@ export default function OrdersPage({ statusKey = "all" }) {
     const isCancelled = () => gen !== fullLoadGenRef.current
     fetchInFlightRef.current = true
     if (!silent) setIsLoading(true)
-    let firstPageShown = false
+
+    const rememberSeen = (list) => {
+      list.forEach((o) => {
+        const key = getOrderKey(o)
+        if (key) seenOrderIdsRef.current.add(key)
+      })
+    }
 
     try {
+      // Step 1 (fast first paint): fetch only the newest few orders – one
+      // small request – and render the table right away.
+      if (!silent) {
+        const quick = await adminAPI.getOrders({ ...params, page: 1, limit: INITIAL_ORDERS_LIMIT })
+        if (isCancelled()) return
+        if (!quick?.data?.success) {
+          const err = new Error(quick?.data?.message || "Failed to fetch orders")
+          err.response = quick
+          throw err
+        }
+        const payload = quick.data.data || {}
+        const firstBatch = Array.isArray(payload.orders)
+          ? payload.orders
+          : Array.isArray(payload.data) ? payload.data : []
+        rememberSeen(firstBatch)
+        setOrders(firstBatch)
+        setIsLoading(false)
+        const total = Number(payload.meta?.total) || firstBatch.length
+        // Nothing more to load – done.
+        if (firstBatch.length >= total) {
+          isFirstLoadRef.current = false
+          return
+        }
+      }
+
+      // Step 2 (background): page through the rest so search/filters/export
+      // work on every order. UI stays usable while this runs.
+      setIsLoadingMore(true)
       const { orders: allOrders, cancelled } = await adminAPI.getAllOrders(params, {
-        pageSize: 500,
+        pageSize: BACKGROUND_ORDERS_PAGE_SIZE,
         isCancelled,
         onPage: (soFar) => {
           if (isCancelled()) return
-          soFar.forEach((o) => {
-            const key = getOrderKey(o)
-            if (key) seenOrderIdsRef.current.add(key)
-          })
-          // Render the first page immediately; keep paging in the background.
-          if (!firstPageShown || silent) {
-            firstPageShown = true
-            if (!silent) setIsLoading(false)
-          }
-          setOrders(soFar)
+          rememberSeen(soFar)
+          startTransition(() => setOrders(soFar))
         },
       })
       if (cancelled || isCancelled()) return
-      setOrders(allOrders)
+      startTransition(() => setOrders(allOrders))
       isFirstLoadRef.current = false
     } catch (error) {
       if (isCancelled()) return
@@ -344,6 +376,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     } finally {
       if (!isCancelled()) {
         fetchInFlightRef.current = false
+        setIsLoadingMore(false)
         if (!silent) setIsLoading(false)
       }
     }
@@ -1037,6 +1070,12 @@ export default function OrdersPage({ statusKey = "all" }) {
         onExport={handleExport}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
+      {isLoadingMore && (
+        <div className="flex items-center gap-2 mb-3 text-xs text-slate-500">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>Loading older orders in background… ({orders.length} loaded)</span>
+        </div>
+      )}
       {statusKey === "all" && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {[

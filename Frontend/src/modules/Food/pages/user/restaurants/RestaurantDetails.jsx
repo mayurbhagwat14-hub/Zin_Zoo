@@ -59,6 +59,7 @@ import {
 } from "@food/utils/foodVariants"
 import fssaiLogo from "@food/assets/fssai.png"
 import { RestaurantDetailSkeleton } from "@food/components/ui/loading-skeletons"
+import RestaurantCoverCarousel, { getRestaurantCoverImages } from "@food/components/user/RestaurantCoverCarousel"
 
 const debugLog = (...args) => { }
 const debugWarn = (...args) => { }
@@ -2142,14 +2143,27 @@ function RestaurantDetailsContent() {
   const isRestaurantOffline = !availabilityStatus.isOpen
   // shouldShowGrayscale controls button-level disable state only (no longer full-page grayscale)
   const shouldShowGrayscale = isOutOfService || isRestaurantOffline
+  const coverImages = getRestaurantCoverImages(restaurant)
+  const hasCover = coverImages.length > 0
 
   return (
     <AnimatedPage
       id="scrollingelement"
       className="min-h-screen bg-white dark:bg-[#1a1a1a] flex flex-col transition-all duration-300"
     >
+      <div className="relative">
+      {/* Cover photos carousel (Back + Search float on top of it) */}
+      {hasCover && (
+        <RestaurantCoverCarousel images={coverImages} alt={restaurant?.name || "Restaurant"} />
+      )}
       {/* Header - Back, Search, Menu (like reference image) */}
-      <div className="px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-3 md:pt-4 lg:pt-5 pb-2 md:pb-3 bg-white dark:bg-[#1a1a1a]">
+      <div
+        className={`px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 pt-3 md:pt-4 lg:pt-5 pb-2 md:pb-3 ${
+          hasCover
+            ? "absolute top-0 inset-x-0 z-20 bg-transparent pointer-events-none [&_button]:pointer-events-auto [&_input]:pointer-events-auto"
+            : "bg-white dark:bg-[#1a1a1a]"
+        }`}
+      >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Back Button */}
           <Button
@@ -2207,6 +2221,7 @@ function RestaurantDetailsContent() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Out-of-service banner – informational, non-intrusive */}
       {isOutOfService && (
@@ -2219,7 +2234,7 @@ function RestaurantDetailsContent() {
       )}
 
       {/* Main Content Card */}
-      <div className="bg-white dark:bg-[#1a1a1a] rounded-t-3xl relative z-10 min-h-[40vh] flex-1">
+      <div className={`bg-white dark:bg-[#1a1a1a] rounded-t-3xl relative z-10 min-h-[40vh] flex-1 ${hasCover && !isOutOfService ? "-mt-6" : ""}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-4 sm:py-5 md:py-6 lg:py-8 space-y-3 md:space-y-4 lg:space-y-5 pb-0">
           {/* Restaurant Name and Rating */}
           <div className="flex items-start justify-between">
