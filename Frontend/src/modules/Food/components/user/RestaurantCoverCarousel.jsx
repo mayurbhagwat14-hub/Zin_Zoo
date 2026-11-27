@@ -84,7 +84,7 @@ export default function RestaurantCoverCarousel({ images = [], alt = "Restaurant
         {images.map((src, i) => (
           <div
             key={`${src}-${i}`}
-            className={`snap-center shrink-0 h-56 sm:h-64 md:h-80 lg:h-96 overflow-hidden ${
+            className={`snap-center shrink-0 h-64 sm:h-72 md:h-96 lg:h-[28rem] overflow-hidden ${
               single ? "w-full" : "w-[78%] sm:w-[70%] md:w-[60%] lg:w-[50%] first:ml-[11%] last:mr-[11%] sm:first:ml-[15%] sm:last:mr-[15%] md:first:ml-[20%] md:last:mr-[20%] lg:first:ml-[25%] lg:last:mr-[25%]"
             }`}
           >
