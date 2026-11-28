@@ -2469,12 +2469,13 @@ export default function Home() {
         Array.isArray(restaurant?.cuisines) && restaurant.cuisines.length > 0
           ? restaurant.cuisines[0]
           : "Multi-cuisine";
+      // Home card uses the admin "Home Page Image" (profileImage) first.
       const imageCandidates = extractImages([
+        restaurant?.profileImage,
         ...(Array.isArray(restaurant?.coverImages)
           ? restaurant.coverImages
           : [restaurant?.coverImages]
         ).filter(Boolean),
-        restaurant?.profileImage,
       ]);
       const image = imageCandidates[0] || "";
 

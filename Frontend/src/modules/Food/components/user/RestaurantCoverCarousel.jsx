@@ -9,14 +9,14 @@ const toUrl = (img) => {
 /** Build the unique, non-empty list of images to show for a restaurant. */
 export function getRestaurantCoverImages(restaurant) {
   if (!restaurant) return []
-  const list = [
-    ...(Array.isArray(restaurant.coverImages) ? restaurant.coverImages : []),
-    restaurant.profileImage,
-    restaurant.image,
-  ]
+  // "Inside" images (coverImages) are set separately by admin for this page.
+  const inside = (Array.isArray(restaurant.coverImages) ? restaurant.coverImages : [])
     .map(toUrl)
     .filter(Boolean)
-  return [...new Set(list)]
+  if (inside.length) return [...new Set(inside)]
+  // Fallback: no inside images yet → use the home/card image.
+  const fallback = [restaurant.profileImage, restaurant.image].map(toUrl).filter(Boolean)
+  return fallback.slice(0, 1)
 }
 
 /**

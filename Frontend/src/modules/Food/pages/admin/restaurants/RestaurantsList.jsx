@@ -96,11 +96,35 @@ const createEmptyForm = () => ({
   restaurantType: "Both",
   zoneId: "",
   profileImage: "",
+  coverImages: [],
   isAcceptingOrders: true,
   latitude: "",
   longitude: "",
   locationMode: "map",
 })
+
+const MAX_COVER_IMAGES = 10
+
+/**
+ * coverImages in the form hold either saved URLs (string) or newly picked
+ * files ({ file, preview }). Upload the new ones and return a URL list.
+ */
+const uploadCoverImages = async (items = []) => {
+  const urls = []
+  for (const item of items) {
+    if (!item) continue
+    if (typeof item === "string") {
+      urls.push(item)
+      continue
+    }
+    if (item.file) {
+      const res = await uploadAPI.uploadMedia(item.file, { folder: "restaurants" })
+      const url = res?.data?.data?.url || res?.data?.url
+      if (url) urls.push(url)
+    }
+  }
+  return urls
+}
 
 export default function RestaurantsList() {
   const [restaurants, setRestaurants] = useState([])
@@ -294,6 +318,9 @@ export default function RestaurantsList() {
         restaurantType: fullRes.restaurantType || (fullRes.pureVegRestaurant ? "Veg" : "Both"),
         zoneId: getZoneId(fullRes),
         profileImage: fullRes.profileImage || "",
+        coverImages: Array.isArray(fullRes.coverImages)
+          ? fullRes.coverImages.map((img) => (typeof img === "string" ? img : img?.url)).filter(Boolean)
+          : [],
         isAcceptingOrders: fullRes.isAcceptingOrders !== false,
         latitude: fullRes.latitude || fullRes.location?.latitude || (fullRes.location?.coordinates ? fullRes.location.coordinates[1] : ""),
         longitude: fullRes.longitude || fullRes.location?.longitude || (fullRes.location?.coordinates ? fullRes.location.coordinates[0] : ""),
@@ -370,9 +397,12 @@ export default function RestaurantsList() {
           profileImageUrl
       }
 
+      const coverImageUrls = await uploadCoverImages(editForm.coverImages)
+
       const body = {
         ...editForm,
         profileImage: profileImageUrl,
+        coverImages: coverImageUrls,
         openDays: editForm.openDays || [],
         cuisines: editForm.cuisines
           ? editForm.cuisines.split(",").map((c) => c.trim()).filter(Boolean)
@@ -481,9 +511,12 @@ export default function RestaurantsList() {
           ""
       }
 
+      const coverImageUrls = await uploadCoverImages(createForm.coverImages)
+
       const body = {
         ...createForm,
         profileImage: profileImageUrl,
+        coverImages: coverImageUrls,
         openDays: createForm.openDays || [],
         cuisines: createForm.cuisines
           ? createForm.cuisines.split(",").map((c) => c.trim()).filter(Boolean)
@@ -1233,6 +1266,84 @@ const MapPicker = ({ form, setForm }) => {
   )
 }
 
+/** Multiple "inside" photos for the restaurant details page carousel. */
+const CoverImagesField = ({ images = [], onChange }) => {
+  const canAdd = images.length < MAX_COVER_IMAGES
+  const srcOf = (item) => (typeof item === "string" ? item : item?.preview || "")
+
+  const removeAt = (index) => {
+    const item = images[index]
+    if (item && typeof item !== "string" && item.preview) URL.revokeObjectURL(item.preview)
+    onChange(images.filter((_, i) => i !== index))
+  }
+
+  const move = (index, dir) => {
+    const target = index + dir
+    if (target < 0 || target >= images.length) return
+    const next = images.slice()
+    ;[next[index], next[target]] = [next[target], next[index]]
+    onChange(next)
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+      <div>
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          Restaurant Page Images (Inside) <span className="text-xs font-normal text-slate-500">({images.length}/{MAX_COVER_IMAGES})</span>
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Shown as the sliding photos at the top when a customer opens this restaurant. First image shows first.
+        </p>
+      </div>
+
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {images.map((item, i) => (
+            <div key={`${srcOf(item)}-${i}`} className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 group">
+              <img src={srcOf(item)} alt={`Inside ${i + 1}`} className="w-full h-full object-cover" />
+              <span className="absolute top-1 left-1 text-[10px] font-semibold bg-black/60 text-white rounded px-1.5">{i + 1}</span>
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="absolute top-1 right-1 p-1 rounded-md bg-red-500/90 hover:bg-red-600 text-white"
+                title="Remove"
+              >
+                <X className="w-3 h-3" />
+              </button>
+              {images.length > 1 && (
+                <div className="absolute bottom-1 inset-x-1 flex justify-between">
+                  <button type="button" disabled={i === 0} onClick={() => move(i, -1)}
+                    className="p-0.5 rounded bg-black/55 text-white disabled:opacity-30" title="Move left">
+                    <ChevronLeft className="w-3 h-3" />
+                  </button>
+                  <button type="button" disabled={i === images.length - 1} onClick={() => move(i, 1)}
+                    className="p-0.5 rounded bg-black/55 text-white disabled:opacity-30" title="Move right">
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canAdd && (
+        <ImageUploadField
+          key={images.length}
+          value={null}
+          onChange={(file) => {
+            if (!file) return
+            onChange([...images, { file, preview: URL.createObjectURL(file) }])
+          }}
+          aspectRatio={1.7777777777777777}
+          label="Add Inside Image (16:9)"
+          helpText="Add one photo at a time. You can add up to 10."
+        />
+      )}
+    </div>
+  )
+}
+
 const RestaurantFormFields = ({ form, setForm, zones = [], setSelectedImageFile, imagePreviewUrl, setImagePreviewUrl }) => {
   if (!form) return null;
   return (
@@ -1254,8 +1365,14 @@ const RestaurantFormFields = ({ form, setForm, zones = [], setSelectedImageFile,
           setForm((p) => ({ ...p, profileImage: "" }))
         }}
         aspectRatio={1.7777777777777777}
-        label="Restaurant Image (16:9)"
-        helpText="Upload restaurant image (shown on user side)"
+        label="Home Page Image (16:9)"
+        helpText="Shown on the restaurant card on Home / listing pages"
+      />
+
+      {/* Inside images – restaurant details page carousel */}
+      <CoverImagesField
+        images={form.coverImages || []}
+        onChange={(next) => setForm((p) => ({ ...p, coverImages: next }))}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

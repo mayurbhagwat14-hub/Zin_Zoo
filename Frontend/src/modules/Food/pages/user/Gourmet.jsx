@@ -260,14 +260,12 @@ export default function Gourmet() {
                     ? restaurant.menuImages.map(img => img.url || img).filter(Boolean)
                     : []
 
+                  // Home/listing card image (profileImage) first; coverImages are inside photos.
                   const rawRestaurantImage =
-                    coverImages.length > 0
+                    restaurant.profileImage?.url || restaurant.profileImage || restaurant.image ||
+                    (coverImages.length > 0
                       ? coverImages[0]
-                      : (restaurant.profileImage?.url || restaurant.profileImage || restaurant.image
-                        ? (restaurant.profileImage?.url || restaurant.profileImage || restaurant.image)
-                        : (menuImages.length > 0
-                          ? menuImages[0]
-                          : ""))
+                      : (menuImages.length > 0 ? menuImages[0] : ""))
 
                   const restaurantImage = resolveImageUrl(rawRestaurantImage)
 

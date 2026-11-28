@@ -2792,6 +2792,13 @@ export async function updateRestaurantById(id, body = {}) {
     if (body.gstImage !== undefined) doc.gstImage = toStr(getUrl(body.gstImage)) || undefined;
     if (body.fssaiImage !== undefined) doc.fssaiImage = toStr(getUrl(body.fssaiImage)) || undefined;
 
+    // Restaurant page ("inside") photos – shown in the carousel on the restaurant
+    // details page. profileImage is the separate home/listing card image.
+    if (body.coverImages !== undefined) {
+        const list = Array.isArray(body.coverImages) ? body.coverImages : [body.coverImages];
+        doc.coverImages = [...new Set(list.map(m => toStr(getUrl(m))).filter(Boolean))].slice(0, 10);
+    }
+
     if (body.menuImages !== undefined) {
         if (Array.isArray(body.menuImages)) {
             doc.menuImages = body.menuImages.map(m => toStr(getUrl(m))).filter(Boolean);
@@ -3778,6 +3785,10 @@ export async function createRestaurantByAdmin(body) {
         accountType: toStr(body.accountType),
         menuImages: menuUrls,
         profileImage: toUrl(body.profileImage),
+        coverImages: (Array.isArray(body.coverImages) ? body.coverImages : [])
+            .map((m) => toUrl(m))
+            .filter(Boolean)
+            .slice(0, 10),
         panImage: toUrl(body.panImage),
         gstImage: toUrl(body.gstImage),
         fssaiImage: toUrl(body.fssaiImage),

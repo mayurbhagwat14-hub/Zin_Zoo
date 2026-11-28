@@ -967,13 +967,14 @@ export default function CategoryPage() {
               ? restaurant.menuImages.map(img => normalizeImageUrl(img.url || img)).filter(Boolean)
               : []
 
-            const allImages = coverImages.length > 0
-              ? coverImages
-              : (restaurant.profileImage?.url
-                ? [normalizeImageUrl(restaurant.profileImage.url)]
-                : (fallbackImages.length > 0
-                  ? fallbackImages
-                  : []))
+            // Listing cards show the admin "Home Page Image" (profileImage) first;
+            // coverImages are the "inside" restaurant-page photos.
+            const homeImage = normalizeImageUrl(restaurant.profileImage?.url || restaurant.profileImage || "")
+            const allImages = homeImage
+              ? [homeImage]
+              : coverImages.length > 0
+                ? coverImages
+                : (fallbackImages.length > 0 ? fallbackImages : [])
 
             const image = allImages[0] || normalizeImageUrl(restaurant.coverImage || restaurant.profileImage?.url || restaurant.profileImage) || ""
 
